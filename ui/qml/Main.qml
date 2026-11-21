@@ -1,4 +1,4 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
@@ -25,7 +25,7 @@ ApplicationWindow {
     readonly property color textDim:   "#5a7890"
     readonly property color textLabel: "#3a6080"
     readonly property string monoFont: Qt.platform.os === "windows" ? "Consolas" : "Monospace"
-    readonly property real RADAR_KM: 40.0
+    readonly property real radarKm: 40.0
 
     property string simClockText: Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
     Timer {
@@ -252,7 +252,7 @@ ApplicationWindow {
             }
         }
 
-        // â”€â”€ Main workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Main workspace Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -263,7 +263,7 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 spacing: 2
 
-                // â”€â”€ Radar PPI panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // Ã¢â€â‚¬Ã¢â€â‚¬ Radar PPI panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -291,7 +291,7 @@ ApplicationWindow {
                         }
                         Item { Layout.fillWidth: true }
                         Text {
-                            text: "R: " + root.RADAR_KM + " km"
+                            text: "R: " + root.radarKm + " km"
                             font.pixelSize: 10
                             color: root.accentCyan
                         }
@@ -340,7 +340,7 @@ ApplicationWindow {
                                 ctx.fillStyle = "#2a5a70";
                                 ctx.font = "9px Consolas,monospace";
                                 ctx.textAlign = "left";
-                                ctx.fillText((root.RADAR_KM * i / 4).toFixed(0) + " km",
+                                ctx.fillText((root.radarKm * i / 4).toFixed(0) + " km",
                                              cx + 4, cy - rr + 10);
                             }
                             var brgs = [0,30,60,90,120,150,180,210,240,270,300,330];
@@ -385,14 +385,14 @@ ApplicationWindow {
                             for (ti = 0; ti < tracks.length; ti++) {
                                 t = tracks[ti];
                                 bc = (t.type === "UAS") ? "#00e888" : "#00d4f0";
-                                px = cx + (t.x_km / root.RADAR_KM) * R;
-                                py = cy - (t.y_km / root.RADAR_KM) * R;
+                                px = cx + (t.x_km / root.radarKm) * R;
+                                py = cy - (t.y_km / root.radarKm) * R;
                                 trail = t.trail;
                                 if (trail && trail.length > 1) {
                                     for (j = 1; j < trail.length; j++) {
                                         a = j / trail.length;
-                                        tpx = cx + (trail[j].x_km / root.RADAR_KM) * R;
-                                        tpy = cy - (trail[j].y_km / root.RADAR_KM) * R;
+                                        tpx = cx + (trail[j].x_km / root.radarKm) * R;
+                                        tpy = cy - (trail[j].y_km / root.radarKm) * R;
                                         ctx.beginPath();
                                         ctx.arc(tpx, tpy, 2, 0, 2 * Math.PI);
                                         ctx.fillStyle = "rgba(0,220,160," + (a * 0.55) + ")";
@@ -460,8 +460,8 @@ ApplicationWindow {
                                 var best = -1, bestD = 18;
                                 for (var ti = 0; ti < tracks.length; ti++) {
                                     var t = tracks[ti];
-                                    var px = cx + (t.x_km / root.RADAR_KM) * R;
-                                    var py = cy - (t.y_km / root.RADAR_KM) * R;
+                                    var px = cx + (t.x_km / root.radarKm) * R;
+                                    var py = cy - (t.y_km / root.radarKm) * R;
                                     var d = Math.sqrt((mouse.x-px)*(mouse.x-px) +
                                                       (mouse.y-py)*(mouse.y-py));
                                     if (d < bestD) { bestD = d; best = t.id; }
@@ -488,7 +488,7 @@ ApplicationWindow {
                     }
                 }
 
-                // â”€â”€ 3-D scene placeholder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // Ã¢â€â‚¬Ã¢â€â‚¬ 3-D scene placeholder Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
                 Rectangle {
                     Layout.preferredWidth: 300
                     Layout.fillHeight: true
@@ -568,7 +568,7 @@ ApplicationWindow {
                 }
             }
 
-            // â”€â”€ Instruments row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Instruments row Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
             Rectangle {
                 Layout.fillWidth: true
                 height: 86
@@ -689,7 +689,7 @@ ApplicationWindow {
                 }
             }
 
-            // â”€â”€ Timeline bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // Ã¢â€â‚¬Ã¢â€â‚¬ Timeline bar Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
             Rectangle {
                 Layout.fillWidth: true
                 height: 36
@@ -739,7 +739,7 @@ ApplicationWindow {
             }
         }
 
-        // â”€â”€ Right control panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Right control panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         Rectangle {
             Layout.preferredWidth: 210
             Layout.fillHeight: true
