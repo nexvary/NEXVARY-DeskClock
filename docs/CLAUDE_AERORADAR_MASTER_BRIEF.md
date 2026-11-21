@@ -7,14 +7,14 @@
 ## 0. Nonnegotiable instructions
 You are Claude acting as principal C++/Qt6 aviation simulation engineer, software architect, UX lead, quality/security reviewer and GitHub release engineer. Continue the **existing** repository; do NOT replace it, rename the public repository, rewrite unrelated Nexvary applications, or claim capabilities without evidence. Owner makes final product/merge decisions; perform safe implementation autonomously and use issue #2 to ask technical questions and post progress.
 
-Existing code on branch \`feature/aeroradar-foundation\` (PR #1): C++20 library \`aeroradar_core\`, a two-dimensional constant-velocity planar toy simulator, CLI, 3 static QML PPI points, one simplistic CTest based on C \`assert\`, Windows/Ubuntu CI for core only. CMake desktop option \`AERORADAR_BUILD_DESKTOP\` currently defaults OFF. Existing green CI **does not** demonstrate working desktop UI, sensor fusion, physics, 3D, SITL or live tracking. Main has only bootstrap README. Inspect current state yourself; this note is a dated baseline, not a substitute for checking newer commits.
+Existing code on branch `feature/aeroradar-foundation` (PR #1): C++20 library `aeroradar_core`, a two-dimensional constant-velocity planar toy simulator, CLI, 3 static QML PPI points, one simplistic CTest based on C `assert`, Windows/Ubuntu CI for core only. CMake desktop option `AERORADAR_BUILD_DESKTOP` currently defaults OFF. Existing green CI **does not** demonstrate working desktop UI, sensor fusion, physics, 3D, SITL or live tracking. Main has only bootstrap README. Inspect current state yourself; this note is a dated baseline, not a substitute for checking newer commits.
 
 ## 1. Three privately owned reuse sources (read-only source repositories)
-1. \`nexvary/NEXVARY-Avionics-Lab\` — C++20/Qt6/QML: \`qml/ProfessionalRadarScope.qml\`, \`ReplayPage.qml\`, \`AttitudeIndicator.qml\`, \`DigitalTwinPage.qml\`, \`AircraftSchematic.qml\`, \`CommonAirPicturePage.qml\`, \`FlightTrackingPage.qml\`; \`src/core/TelemetryRecorder.*\`, \`TelemetryArchive.*\`, \`SensorBus.*\`, \`EventLog.*\`, \`src/air_ops/AirOperationsIntegration.*\`. Check QML dependencies and associated tests. Prior CodeQL run failed; failure cause not verified. Do not assume inherited code is secure.
-2. \`nexvary/NEXVARY-Aviation-Navigator\` — Kotlin Android: \`domain/AircraftTrack.kt\`, \`data/TrafficRepository.kt\`, \`AdsbLolProvider.kt\`, \`OpenSkyProvider.kt\`, \`AircraftMapLayer.kt\`. Use data-contract ideas, provider quality rules and display principles; rewrite/adapt into clean C++ rather than embedding Android code.
-3. \`nexvary/Aegis-CUAS-Command\` — C#/.NET: \`Simulation/AirspaceSimulator.cs\`, \`Tracking/TrackFusionEngine.cs\`, \`Sensors/SensorAdapterContracts.cs\`, \`Playback/*\`, \`Integration/AirOperationsExchange.cs\`, \`Geofencing/*\`, \`EoIr/RecordedEoIrPlaybackAdapter.cs\`. Its simulator emits synthetic tracks and pseudo-observations: not validated 6DoF flight physics. Reuse concepts and independently implement/test in C++; do not copy C# mechanically.
+1. `nexvary/NEXVARY-Avionics-Lab` — C++20/Qt6/QML: `qml/ProfessionalRadarScope.qml`, `ReplayPage.qml`, `AttitudeIndicator.qml`, `DigitalTwinPage.qml`, `AircraftSchematic.qml`, `CommonAirPicturePage.qml`, `FlightTrackingPage.qml`; `src/core/TelemetryRecorder.*`, `TelemetryArchive.*`, `SensorBus.*`, `EventLog.*`, `src/air_ops/AirOperationsIntegration.*`. Check QML dependencies and associated tests. Prior CodeQL run failed; failure cause not verified. Do not assume inherited code is secure.
+2. `nexvary/NEXVARY-Aviation-Navigator` — Kotlin Android: `domain/AircraftTrack.kt`, `data/TrafficRepository.kt`, `AdsbLolProvider.kt`, `OpenSkyProvider.kt`, `AircraftMapLayer.kt`. Use data-contract ideas, provider quality rules and display principles; rewrite/adapt into clean C++ rather than embedding Android code.
+3. `nexvary/Aegis-CUAS-Command` — C#/.NET: `Simulation/AirspaceSimulator.cs`, `Tracking/TrackFusionEngine.cs`, `Sensors/SensorAdapterContracts.cs`, `Playback/*`, `Integration/AirOperationsExchange.cs`, `Geofencing/*`, `EoIr/RecordedEoIrPlaybackAdapter.cs`. Its simulator emits synthetic tracks and pseudo-observations: not validated 6DoF flight physics. Reuse concepts and independently implement/test in C++; do not copy C# mechanically.
 
-Aegis/Avionics have documented versioned awareness interchange contract \`nexvary.air-operations.exchange/v1\` supporting \`simulation-replay\` and \`awareness-only\`; preserve wire compatibility via published schemas/contract fixtures and tests, not loose handwritten assumptions. Exchanges are read-only with **no** reverse aircraft commands.
+Aegis/Avionics have documented versioned awareness interchange contract `nexvary.air-operations.exchange/v1` supporting `simulation-replay` and `awareness-only`; preserve wire compatibility via published schemas/contract fixtures and tests, not loose handwritten assumptions. Exchanges are read-only with **no** reverse aircraft commands.
 
 **PUBLIC SOURCE BOUNDARY**: these three sources are private; DeskClock is PUBLIC. Treat all inherited private source as internal proprietary until owner explicitly confirms release of specific code. Never commit private files, proprietary designs, datasets or third-party restricted material to public DeskClock merely because all four repos have the same owner. Prepare an adoption inventory and ask the owner once if the release decision is needed. You may independently implement interoperable public contracts without copying private implementation.
 
@@ -32,31 +32,31 @@ Aegis/Avionics have documented versioned awareness interchange contract \`nexvar
 - Qt licenses: https://www.qt.io/development/qt-framework/qt-licensing — commercial or LGPL/GPL conditions vary by Qt module, static/dynamic link and deployment. Verify.
 - Flight-feed licenses: treat OpenSky especially as restricted for commercial or operational use; don't bundle public API data as though it is freely redistributable. Every map tile, model, sound, font and icon requires a per-asset license review.
 
-Create \`docs/THIRD_PARTY_ADOPTION_MATRIX.md\`: URL, upstream SHA/tag, author, license SPDX, chosen action (reference / external process / linked dependency / reimplement), dependency tree, attribution, commercial distribution consequences, Windows build, owner approval status. No code or asset copying without green license gate.
+Create `docs/THIRD_PARTY_ADOPTION_MATRIX.md`: URL, upstream SHA/tag, author, license SPDX, chosen action (reference / external process / linked dependency / reimplement), dependency tree, attribution, commercial distribution consequences, Windows build, owner approval status. No code or asset copying without green license gate.
 
 ## 3. Architecture and language
 C++20, CMake (minimum existing v3.22), Qt6/QML Quick/Quick Controls for GUI, Qt Quick 3D optional; tests via Catch2 or GoogleTest or an explicit custom check macro **not eliminated by NDEBUG**; package on Windows and test Linux. No Qt dependency in the core library.
 
 Suggested modules:
-- \`core/domain\`: Track, Observation, AircraftState, VehicleProfile, SensorReading, Scenario, Provenance; explicit units.
-- \`core/time\`: injectable deterministic fixed-step monotonic simulation clock and UTC conversion.
-- \`core/flight_sim\`: \`IFlightDynamicsBackend\`, basic kinematic track generator, validated multirotor dynamics backend, optional JSBSim fixed-wing adapter; never mix tracking extrapolation with genuine flight physics.
-- \`core/world\`: WGS84 reference, local ENU/NED coordinate transforms, Earth curvature where appropriate; wind/weather layers and scenario boundaries.
-- \`core/sensors\`: configurable synthetic GNSS/GPS, IMU, barometer, magnetometer, altimeter, Remote-ID-like/Radar-like observations explicitly marked simulated. Seeded noise and latency; no claim of actual hardware measurements.
-- \`core/tracking\`: immutable provenance-aware observations, track association, stale/unknown source indication, uncertainty; no false "verified" classifications.
-- \`core/scenario\`: versioned JSON schema, reproducible random seed, fixtures, reset, pause/resume, acceleration and step controls, deterministic serialization/replay.
-- \`core/airspace\`: informative geofence layers, WGS84 latitude/longitude validation, timestamps, read-only licensed provider adapters; not an operational ATC decision engine.
-- \`core/interop\`: awareness exchange v1 compatibility; separate MAVLink receiver / SITL interop adapter. Explicit local-only mode, separate network activation.
-- \`apps/desktop\`: Qt UI, responsive QML components, telemetry charts, radar PPI, synthetic 3D viewport; driven by typed C++ models and signals rather than QML hardcoded arrays.
-- \`apps/cli\`: headless scenarios, benchmark, deterministic test or export utility.
-- \`tests\`: unit, integration, regression, GUI smoke, schema/golden replay, packaging tests.
-- \`docs\`: architecture decisions (ADRs), safety and validation limits, user manual, license attribution, handoff.
+- `core/domain`: Track, Observation, AircraftState, VehicleProfile, SensorReading, Scenario, Provenance; explicit units.
+- `core/time`: injectable deterministic fixed-step monotonic simulation clock and UTC conversion.
+- `core/flight_sim`: `IFlightDynamicsBackend`, basic kinematic track generator, validated multirotor dynamics backend, optional JSBSim fixed-wing adapter; never mix tracking extrapolation with genuine flight physics.
+- `core/world`: WGS84 reference, local ENU/NED coordinate transforms, Earth curvature where appropriate; wind/weather layers and scenario boundaries.
+- `core/sensors`: configurable synthetic GNSS/GPS, IMU, barometer, magnetometer, altimeter, Remote-ID-like/Radar-like observations explicitly marked simulated. Seeded noise and latency; no claim of actual hardware measurements.
+- `core/tracking`: immutable provenance-aware observations, track association, stale/unknown source indication, uncertainty; no false "verified" classifications.
+- `core/scenario`: versioned JSON schema, reproducible random seed, fixtures, reset, pause/resume, acceleration and step controls, deterministic serialization/replay.
+- `core/airspace`: informative geofence layers, WGS84 latitude/longitude validation, timestamps, read-only licensed provider adapters; not an operational ATC decision engine.
+- `core/interop`: awareness exchange v1 compatibility; separate MAVLink receiver / SITL interop adapter. Explicit local-only mode, separate network activation.
+- `apps/desktop`: Qt UI, responsive QML components, telemetry charts, radar PPI, synthetic 3D viewport; driven by typed C++ models and signals rather than QML hardcoded arrays.
+- `apps/cli`: headless scenarios, benchmark, deterministic test or export utility.
+- `tests`: unit, integration, regression, GUI smoke, schema/golden replay, packaging tests.
+- `docs`: architecture decisions (ADRs), safety and validation limits, user manual, license attribution, handoff.
 
 Prefer contracts such as:
-\`IFlightDynamicsBackend::initialize(profile, initialState)\`, \`step(dtSeconds, environment, controls)\`, \`state()\`; \`ITrackSource::poll(simTime)\`; \`IScenarioStore::save/load\`; \`IReplayEngine::seek/play/pause\`. These are sketches to refine after studying actual source.
+`IFlightDynamicsBackend::initialize(profile, initialState)`, `step(dtSeconds, environment, controls)`, `state()`; `ITrackSource::poll(simTime)`; `IScenarioStore::save/load`; `IReplayEngine::seek/play/pause`. These are sketches to refine after studying actual source.
 
 ### Required data fields / integrity rules
-Every displayed target: \`track_id\`, \`source_type\` (SIMULATION / REPLAY / LIVE_AUTHORIZED), \`source_id\`, \`observed_at_utc\` ISO8601, \`lat_deg\`, \`lon_deg\`, \`altitude_m\` with reference (MSL/AGL/ellipsoid explicitly), \`groundspeed_mps\`, \`vertical_speed_mps\`, \`heading_deg\`, \`classification\`, \`confidence\` and/or uncertainty, \`synthetic=true/false\`, \`scenario_id\` and version, plus per-reading provenance. Store a canonical model in SI units; convert to knots/feet only in UI. Reject NaN/infinite states and invalid coordinates. Never show a zero altitude or position for missing values. Generate UTC clock from a single controlled time service; deterministic run ID/seed.
+Every displayed target: `track_id`, `source_type` (SIMULATION / REPLAY / LIVE_AUTHORIZED), `source_id`, `observed_at_utc` ISO8601, `lat_deg`, `lon_deg`, `altitude_m` with reference (MSL/AGL/ellipsoid explicitly), `groundspeed_mps`, `vertical_speed_mps`, `heading_deg`, `classification`, `confidence` and/or uncertainty, `synthetic=true/false`, `scenario_id` and version, plus per-reading provenance. Store a canonical model in SI units; convert to knots/feet only in UI. Reject NaN/infinite states and invalid coordinates. Never show a zero altitude or position for missing values. Generate UTC clock from a single controlled time service; deterministic run ID/seed.
 
 ### FlightSim safety and physics
 - Distinguish three levels visibly: A) kinematic synthetic tracks, B) physics simulation, C) SITL autopilot interactions. Provide separate labels and fidelity metadata.
@@ -79,12 +79,12 @@ Desktop layout:
 - Bottom: timeline with scrub/play/pause/step/0.25×–4× and telemetry multi-series plot.
 - Per-state transitions and truthful labels: "SIMULATED", "REPLAY", "LIVE AUTHORIZED" distinct shapes/legends; never silently merge fake with real.
 - Accessibility: tooltips, explicit unit strings, legends, reduced-motion toggle, UI tests, RTL layout validation.
-Build reusable QML components from Avionics Lab **only after** internal code/public release review; isolate their dependencies and add screenshot regression tests. Do not blindly copy QML pages requiring a global \`cockpit\` object into the new Qt shell.
+Build reusable QML components from Avionics Lab **only after** internal code/public release review; isolate their dependencies and add screenshot regression tests. Do not blindly copy QML pages requiring a global `cockpit` object into the new Qt shell.
 
 ## 5. Development order / PR boundaries
 **P0 audit + fix current baseline** (separate PR):
 1. Capture exact HEAD/branch and PR state; inventory repos including CI/log failures.
-2. Replace \`assert\` tests with robust framework; run Release and Debug CTest on Windows/Linux.
+2. Replace `assert` tests with robust framework; run Release and Debug CTest on Windows/Linux.
 3. Add Qt desktop build to matrix, QML load smoke test, screenshots from real app, and artifacts. Avoid claiming run on physical Windows if CI-only.
 4. Wire at least 3 genuinely moving synthetic targets from C++ core into QML via model/signal; visual track positions update deterministically; time controls pause/reset.
 5. Update documentation to state working vs mock.
@@ -92,7 +92,7 @@ Build reusable QML components from Avionics Lab **only after** internal code/pub
 **P1 consolidate architecture + read-only interoperability**:
 - ADRs and schema/contract tests, provenance data, user-controlled unit display and UTC, safe deserialization and strict enum validations.
 - Review all 3 private repos and create reuse map, dependency and license checks. Decision gate before source copies into PUBLIC DeskClock.
-- Implement separately \`nexvary.air-operations.exchange/v1\` read-only compatibility with recorded fixtures.
+- Implement separately `nexvary.air-operations.exchange/v1` read-only compatibility with recorded fixtures.
 
 **P2 FlightSim v0.1 operational offline demonstrator**:
 - Deterministic multi-aircraft kinematic scenarios + save/load/replay + measured CPU/RAM.
@@ -109,14 +109,14 @@ Build reusable QML components from Avionics Lab **only after** internal code/pub
 - BlueSky reference for multiple-aircraft airspace research, scenario files, collision proximity visualization as **research indication, not safety authority**.
 
 **P5 QA/security/release**:
-- Qt deployment \`windeployqt\`/installer, no portable-only release when installer needed, x64, self-contained runtime and Qt license notices.
+- Qt deployment `windeployqt`/installer, no portable-only release when installer needed, x64, self-contained runtime and Qt license notices.
 - CMake presets, pinned dependencies/lockfiles, MSVC+Clang/GCC warnings, compiler analysis, CodeQL, sanitizers where supported, SBOM and THIRD_PARTY_NOTICES, CodeQL review.
 - Tests for frame-rate-independent stepping, determinism, invalid time, nonfinite state, geographic wrap, stale feeds, network opt-in, malicious/corrupt scenario file, source confusion, huge target count, multi-window resizing, Arabic RTL, accessibility; use a test matrix with passed/failed/not-tested statuses.
 - GitHub Actions publish versioned screenshot, test reports, installer artifact and SHA256; only call build releasable after Windows launch + verified installer validation.
 
 ## 6. Strict execution / GitHub communications
-- Public repo \`nexvary/NEXVARY-DeskClock\`. Do not rename. Work in new scoped branches and DRAFT PRs against correct base. Do not merge/release without owner authorization.
-- Official discussion at **https://github.com/nexvary/NEXVARY-DeskClock/issues/2**. Post summaries using \`[CLAUDE] IMPLEMENTATION REPORT\` / \`[CLAUDE → CHATGPT] REVIEW REQUEST\`; include UTC timestamp, branch, commit/PR/CI links, exact modified files, actual screenshots, tests passed/failing, blockers and security/license risks. Do NOT claim automatic live chat with ChatGPT. When the owner invokes ChatGPT, it can read and post comments through its authenticated GitHub connector.
+- Public repo `nexvary/NEXVARY-DeskClock`. Do not rename. Work in new scoped branches and DRAFT PRs against correct base. Do not merge/release without owner authorization.
+- Official discussion at **https://github.com/nexvary/NEXVARY-DeskClock/issues/2**. Post summaries using `[CLAUDE] IMPLEMENTATION REPORT` / `[CLAUDE → CHATGPT] REVIEW REQUEST`; include UTC timestamp, branch, commit/PR/CI links, exact modified files, actual screenshots, tests passed/failing, blockers and security/license risks. Do NOT claim automatic live chat with ChatGPT. When the owner invokes ChatGPT, it can read and post comments through its authenticated GitHub connector.
 - Do NOT divulge private source material, license-incompatible code, secrets, data-provider tokens, or misleading screenshots to public GitHub. For confidential discussions propose private project handoff instead.
 - If you encounter a blocker, choose the safest partial implementation and document what remains. Avoid unnecessary owner interruptions. First concrete target is P0 and a working animated simulation-only dashboard with reliable tests and CI.
 
