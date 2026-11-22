@@ -1,5 +1,4 @@
 #include "SimulatorModel.hpp"
-#include <QDateTime>
 #include <QString>
 #include <cmath>
 
@@ -7,8 +6,8 @@
 
 aeroradar::Simulator SimulatorModel::makeScenario() {
     using namespace aeroradar;
-    // Three synthetic research aircraft matching the concept image layout.
-    // All speeds/positions are purely illustrative; labelled SIMULATION.
+    // Simulation epoch: 2025-01-01T00:00:00Z (documented baseline)
+    // All positions/velocities: purely illustrative synthetic data.
     // Headings expressed as CW degrees from north:
     //   AC-01:  heading ~087°, speed ~61 m/s (118 kt), fixed-wing
     //   UAS-01: heading ~200°, speed ~19 m/s (36 kt),  multirotor
@@ -17,16 +16,16 @@ aeroradar::Simulator SimulatorModel::makeScenario() {
     auto vel = [&](double heading_deg, double speed_kt_val) {
         const double r = heading_deg * (M_PI / 180.0);
         const double spd = speed_kt_val * kts2kmps;
-        return std::make_pair(spd * std::sin(r), spd * std::cos(r)); // vx, vy
+        return std::make_pair(spd * std::sin(r), spd * std::cos(r));
     };
     auto [vx1, vy1] = vel(87.0,  118.0);
     auto [vx2, vy2] = vel(200.0,  36.0);
     auto [vx3, vy3] = vel(310.0,  83.0);
 
     return Simulator({
-        { 1,  14.0,  5.0,  vx1, vy1, 3500.0, AircraftType::FIXED_WING, "AC-01"  },
-        { 2,  -6.5, -17.5, vx2, vy2,  150.0, AircraftType::MULTIROTOR, "UAS-01" },
-        { 3,  -9.0,   8.0, vx3, vy3, 1200.0, AircraftType::MULTIROTOR, "UAS-02" },
+        { 1,  14.0,   5.0,  vx1, vy1, 3500.0, AircraftType::FIXED_WING, "AC-01"  },
+        { 2,  -6.5, -17.5,  vx2, vy2,  150.0, AircraftType::MULTIROTOR, "UAS-01" },
+        { 3,  -9.0,   8.0,  vx3, vy3, 1200.0, AircraftType::MULTIROTOR, "UAS-02" },
     });
 }
 
@@ -37,14 +36,11 @@ SimulatorModel::SimulatorModel(QObject* parent)
     , sim_(makeScenario())
     , timer_(new QTimer(this))
 {
-    // Initialise trail deques, one per aircraft
     trails_.resize(sim_.aircraft().size());
-
     connect(timer_, &QTimer::timeout, this, &SimulatorModel::onTick);
     timer_->setInterval(static_cast<int>(SIM_DT_S * 1000.0)); // 100 ms
     timer_->start();
 
-    // Select first track by default
     if (!sim_.aircraft().empty())
         selectedId_ = sim_.aircraft().front().id;
 }
@@ -52,18 +48,27 @@ SimulatorModel::SimulatorModel(QObject* parent)
 // --- Tick -----------------------------------------------------------------
 
 void SimulatorModel::onTick() {
+    // step() is a no-op when paused; call unconditionally for clean semantics
     sim_.step(SIM_DT_S);
 
-    // Append current positions to trails
-    for (std::size_t i = 0; i < sim_.aircraft().size(); ++i) {
-        const auto& a = sim_.aircraft()[i];
-        auto& trail = trails_[i];
-        trail.emplace_back(a.x_km, a.y_km);
-        while (static_cast<int>(trail.size()) > TRAIL_LEN)
-            trail.pop_front();
+    // FIX: only accumulate trail history when simulation is actually advancing.
+    // When paused, positions are unchanged; appending would fill the ring-buffer
+    // with duplicates and silently erase earlier genuine track history.
+    if (!sim_.is_paused()) {
+        for (std::size_t i = 0; i < sim_.aircraft().size(); ++i) {
+            const auto& a = sim_.aircraft()[i];
+            auto& trail = trails_[i];
+            trail.emplace_back(a.x_km, a.y_km);
+            while (static_cast<int>(trail.size()) > TRAIL_LEN)
+                trail.pop_front();
+        }
     }
 
+    // FIX: emit selectedChanged() so QML bindings on simulator.selected.*
+    // (range_km, heading_deg, speed_kt, etc.) update on every physics tick,
+    // not only when selectTrack() is called.
     emit simStateChanged();
+    emit selectedChanged();
 }
 
 // --- Properties -----------------------------------------------------------
@@ -102,7 +107,6 @@ QVariantMap SimulatorModel::trackToVariant(const aeroradar::Aircraft& a) const {
                            ? QStringLiteral("UAS") : QStringLiteral("FIXED_WING");
     m["selected"]    = (a.id == selectedId_);
 
-    // Build trail list
     QVariantList trail;
     for (std::size_t i = 0; i < sim_.aircraft().size(); ++i) {
         if (sim_.aircraft()[i].id == a.id) {
@@ -138,6 +142,7 @@ void SimulatorModel::play() {
     sim_.resume();
     if (!timer_->isActive()) timer_->start();
     emit simStateChanged();
+    emit selectedChanged();
 }
 
 void SimulatorModel::pause() {
@@ -149,6 +154,7 @@ void SimulatorModel::reset() {
     sim_.reset();
     for (auto& t : trails_) t.clear();
     emit simStateChanged();
+    emit selectedChanged();
 }
 
 void SimulatorModel::selectTrack(int id) {

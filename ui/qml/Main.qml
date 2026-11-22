@@ -27,12 +27,12 @@ ApplicationWindow {
     readonly property string monoFont: Qt.platform.os === "windows" ? "Consolas" : "Monospace"
     readonly property real radarKm: 40.0
 
-    property string simClockText: Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+    property string utcWallClock: new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC"
     Timer {
         interval: 1000
         running: true
         repeat: true
-        onTriggered: root.simClockText = Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+        onTriggered: root.utcWallClock = new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC"
     }
     header: Rectangle {
         color: "#080f1c"
@@ -137,7 +137,7 @@ ApplicationWindow {
                     model: [
                         {lbl:"TRACKS",        val: simulator ? String(simulator.trackCount) : "--", unit:"(Simulated)"},
                         {lbl:"SCENARIO",      val: "Research-01", unit:"Multi-Platform Test"},
-                        {lbl:"SIM TIME (UTC)",val: simClockText,  unit:""},
+                        {lbl:"UTC WALL CLOCK", val: utcWallClock, unit:""},
                         {lbl:"ELAPSED",       val: simulator ? simulator.simTimeDisplay : "00:00:00", unit:""},
                         {lbl:"WEATHER (SIM)", val: "Clear  18 C", unit:"Wind 12kt NW(310)"},
                         {lbl:"ENVIRONMENT",   val: "Coastal / Mountain", unit:""},
@@ -205,14 +205,14 @@ ApplicationWindow {
                 }
                 Repeater {
                     model: [
-                        {label:"OVERVIEW",    active:false},
+                        {label:"OVERVIEW (P2)",    active:false},
                         {label:"FLIGHT SIM",  active:true},
                         {label:"RADAR PPI",   active:false},
-                        {label:"AIR TRAFFIC", active:false},
-                        {label:"SENSORS",     active:false},
-                        {label:"REPLAY",      active:false},
-                        {label:"RESEARCH",    active:false},
-                        {label:"SYSTEM",      active:false}
+                        {label:"AIR TRAFFIC (P2)", active:false},
+                        {label:"SENSORS (P2)",     active:false},
+                        {label:"REPLAY (P2)",      active:false},
+                        {label:"RESEARCH (P2)",    active:false},
+                        {label:"SYSTEM (P2)",      active:false}
                     ]
                     delegate: Rectangle {
                         Layout.fillWidth: true

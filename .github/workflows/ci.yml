@@ -1,4 +1,4 @@
-name: AeroRadar CI
+﻿name: AeroRadar CI
 
 on:
   push:
@@ -31,13 +31,13 @@ jobs:
       - name: Build Release
         run: cmake --build build-release --config Release --parallel 2
 
-      - name: Test Debug
+      - name: Test Debug (19 unit tests, AERO_REQUIRE active)
         run: ctest --test-dir build-debug   -C Debug   --output-on-failure
 
       - name: Test Release (verify AERO_REQUIRE is not disabled by NDEBUG)
         run: ctest --test-dir build-release -C Release --output-on-failure
 
-  # --- Desktop: Qt 6.5 + QML smoke test ---
+  # --- Desktop: Qt 6.5 + QML compile + gated smoke test ---
   desktop:
     name: Desktop Qt (${{ matrix.os }})
     strategy:
@@ -55,7 +55,7 @@ jobs:
           modules: 'qtquick3d'
           cache: true
 
-      - name: Install Linux GL deps
+      - name: Install Linux GL + Xvfb deps
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -y
@@ -73,14 +73,63 @@ jobs:
       - name: Test Core (Release)
         run: ctest --test-dir build -C Release -R simulator_tests --output-on-failure
 
-      - name: QML smoke test (offscreen)
+      # Linux smoke test: --smoke flag causes app to load QML, wait 1500 ms, exit 0 on success.
+      # QT_QPA_PLATFORM=offscreen: headless rendering via Qt's offscreen backend.
+      # Exit code 0  = QML loaded correctly (PASS).
+      # Exit code 1  = QML object creation failed or root objects empty (FAIL).
+      # Any stderr matching QML error patterns also fails CI.
+      - name: QML smoke test â€” Linux offscreen
         if: runner.os == 'Linux'
         run: |
           export QT_QPA_PLATFORM=offscreen
-          timeout 8 ./build/aeroradar_desktop || true
-          echo "QML load smoke test complete"
+          ./build/aeroradar_desktop --smoke > smoke_stdout.txt 2> smoke_stderr.txt
+          SMOKE_EXIT=$?
+          echo "--- stdout ---"
+          cat smoke_stdout.txt
+          echo "--- stderr ---"
+          cat smoke_stderr.txt
+          if [ "$SMOKE_EXIT" -ne 0 ]; then
+            echo "FAIL: smoke test exited with code $SMOKE_EXIT"
+            exit 1
+          fi
+          if grep -qiE "(qml.*error|failed to load|unable to load|cannot open|objectCreationFailed)" smoke_stderr.txt; then
+            echo "FAIL: QML errors detected in stderr"
+            exit 1
+          fi
+          echo "PASS: QML loaded cleanly under offscreen backend"
 
-      - name: Upload desktop binary
+      # Windows smoke test: same --smoke flag, QT_QPA_PLATFORM=offscreen.
+      - name: QML smoke test â€” Windows offscreen
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $psi = New-Object System.Diagnostics.ProcessStartInfo
+          $psi.FileName = "build\Release\aeroradar_desktop.exe"
+          $psi.Arguments = "--smoke"
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $proc = [System.Diagnostics.Process]::Start($psi)
+          $stdout = $proc.StandardOutput.ReadToEnd()
+          $stderr = $proc.StandardError.ReadToEnd()
+          $proc.WaitForExit()
+          $exit = $proc.ExitCode
+          Write-Host "--- stdout ---"
+          Write-Host $stdout
+          Write-Host "--- stderr ---"
+          Write-Host $stderr
+          if ($exit -ne 0) {
+            Write-Error "FAIL: smoke test exited $exit"
+            exit 1
+          }
+          if ($stderr -match "(?i)(qml.*error|failed to load|unable to load|objectCreationFailed)") {
+            Write-Error "FAIL: QML errors in stderr"
+            exit 1
+          }
+          Write-Host "PASS: QML loaded cleanly under offscreen backend (Windows)"
+
+      - name: Upload desktop binary + smoke logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -88,4 +137,6 @@ jobs:
           path: |
             build/aeroradar_desktop*
             build/Release/aeroradar_desktop*
+            smoke_stdout.txt
+            smoke_stderr.txt
           if-no-files-found: ignore
