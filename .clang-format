@@ -1,0 +1,13 @@
+# AeroRadar C++20 baseline. Formatting enforcement is a separate follow-up
+# after the existing source files have been formatted and reviewed.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+BreakBeforeBraces: Attach
+SpaceBeforeParens: ControlStatements
+PointerAlignment: Left
+AlignAfterOperator: Align
+SortIncludes: CaseSensitive
