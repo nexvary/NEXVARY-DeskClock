@@ -160,11 +160,9 @@ AERO_TEST(speed_kt_conversion) {
     AERO_REQUIRE_NEAR(speed_kt(a), 100.0, 0.01);
 }
 
-int main() {
-
 AERO_TEST(bearing_west) {
     using namespace aeroradar;
-    // Pure west velocity (vx = -1, vy = 0) → bearing = 270°
+    // Pure west velocity (vx = -1, vy = 0) -> bearing = 270 deg
     Aircraft a{ 1, 0.0, 0.0, -1.0, 0.0, 0.0 };
     AERO_REQUIRE_NEAR(bearing_deg(a), 270.0, 1e-9);
 }
@@ -174,6 +172,6 @@ int main() {
     // If any failed, std::exit(1) was already called.
     // 19 tests: range(2) step(3) elapsed(1) invalid_dt(3)
     //           pause/resume/reset(4) multi(1) bearing(4) speed(2) = 19
-    std::fprintf(stdout, "\nAll %d simulator tests passed.\n", 19);
+    std::fprintf(stdout, "\nAll 19 simulator tests passed.\n");
     return 0;
 }
