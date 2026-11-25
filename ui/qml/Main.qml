@@ -7,7 +7,7 @@ import AeroRadar
 // DATA: SYNTHETIC / SIMULATED.  No live aircraft data.
 //
 // Orchestration-only: composes independent QML modules.
-// All simulation logic lives in C++ SimulatorModel (context property: simulator).
+// All simulation logic lives in C++ SimulatorModel (context property: aeroSimulatorModel).
 ApplicationWindow {
     id: root
     visible: true
@@ -26,7 +26,7 @@ ApplicationWindow {
 
     // ── Application header ───────────────────────────────────────────────
     header: StatusStrip {
-        simulator:    simulator
+        simulator:    aeroSimulatorModel
         utcWallClock: root.utcWallClock
     }
 
@@ -101,7 +101,7 @@ ApplicationWindow {
                 // Radar PPI component
                 RadarPpi {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    simulator: simulator
+                    simulator: aeroSimulatorModel
                     rangeKm: 40.0
                 }
 
@@ -134,21 +134,21 @@ ApplicationWindow {
                         // Selected track detail panel
                         ColumnLayout {
                             Layout.fillWidth: true; spacing: 4
-                            visible: simulator && simulator.selected &&
-                                     simulator.selected.id !== undefined
+                            visible: aeroSimulatorModel && aeroSimulatorModel.selected &&
+                                     aeroSimulatorModel.selected.id !== undefined
 
                             Text { text: "SELECTED TRACK"; font.pixelSize: 9; color: AeroTheme.textLabel }
                             Rectangle { Layout.fillWidth: true; height: 1; color: AeroTheme.borderDim }
 
                             Repeater {
-                                model: (simulator && simulator.selected &&
-                                        simulator.selected.id !== undefined) ? [
-                                    {k:"ID",   v: String(simulator.selected.label)},
-                                    {k:"TYPE", v: String(simulator.selected.type)},
-                                    {k:"ALT",  v: simulator.selected.altitude_m.toFixed(0) + " m"},
-                                    {k:"SPD",  v: simulator.selected.speed_kt.toFixed(0)   + " kt"},
-                                    {k:"HDG",  v: simulator.selected.heading_deg.toFixed(0) + "°"},
-                                    {k:"RNG",  v: simulator.selected.range_km.toFixed(1)   + " km"}
+                                model: (aeroSimulatorModel && aeroSimulatorModel.selected &&
+                                        aeroSimulatorModel.selected.id !== undefined) ? [
+                                    {k:"ID",   v: String(aeroSimulatorModel.selected.label)},
+                                    {k:"TYPE", v: String(aeroSimulatorModel.selected.type)},
+                                    {k:"ALT",  v: aeroSimulatorModel.selected.altitude_m.toFixed(0) + " m"},
+                                    {k:"SPD",  v: aeroSimulatorModel.selected.speed_kt.toFixed(0)   + " kt"},
+                                    {k:"HDG",  v: aeroSimulatorModel.selected.heading_deg.toFixed(0) + "°"},
+                                    {k:"RNG",  v: aeroSimulatorModel.selected.range_km.toFixed(1)   + " km"}
                                 ] : []
                                 delegate: RowLayout {
                                     Layout.fillWidth: true
@@ -164,7 +164,7 @@ ApplicationWindow {
             // Flight instruments strip
             FlightInstruments {
                 Layout.fillWidth: true
-                simulator: simulator
+                simulator: aeroSimulatorModel
             }
 
             // Scenario timeline bar
@@ -186,13 +186,13 @@ ApplicationWindow {
                         Layout.fillWidth: true; height: 6; radius: 3; color: "#0d1e30"
                         Rectangle {
                             width: parent.width * Math.min(
-                                       1.0, simulator ? simulator.simTimeSeconds / 600.0 : 0)
+                                       1.0, aeroSimulatorModel ? aeroSimulatorModel.simTimeSeconds / 600.0 : 0)
                             height: parent.height; radius: parent.radius
                             color: AeroTheme.accentBlue
                         }
                     }
                     Text {
-                        text: simulator ? simulator.simTimeDisplay : "00:00:00"
+                        text: aeroSimulatorModel ? aeroSimulatorModel.simTimeDisplay : "00:00:00"
                         font.pixelSize: 10; color: AeroTheme.accentBlue
                         font.family: AeroTheme.monoFont
                     }
@@ -208,7 +208,7 @@ ApplicationWindow {
         // Right simulation controls
         SimulationControls {
             Layout.preferredWidth: 210; Layout.fillHeight: true
-            simulator: simulator
+            simulator: aeroSimulatorModel
         }
     }
 }
