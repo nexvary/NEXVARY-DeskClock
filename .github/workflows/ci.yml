@@ -75,22 +75,10 @@ jobs:
         run: cmake --build build --config Release --parallel 2
 
       - name: Test Core (Release)
-        run: ctest --test-dir build -C Release -R '^simulator_tests--no-tests=error --output-on-failure
+        run: ctest --test-dir build -C Release -R '^simulator_tests$' --no-tests=error --output-on-failure
 
-      - name: Test Qt integration (SimulatorModel, Release)
-        run: ctest --test-dir build -C Release -R '^simulator_tests_integration --no-tests=error --output-on-failure
-
- --no-tests=error --output-on-failure
-
-      - name: Test Qt integration (SimulatorModel, Release)
-        run: ctest --test-dir build -C Release -R simulator_model_tests --no-tests=error --output-on-failure
-
- --no-tests=error --output-on-failure
-
- --no-tests=error --output-on-failure
-
-      - name: Test Qt integration (SimulatorModel, Release)
-        run: ctest --test-dir build -C Release -R simulator_model_tests --no-tests=error --output-on-failure
+      - name: Test Qt integration (Release)
+        run: ctest --test-dir build -C Release -R '^simulator_tests_integration$' --no-tests=error --output-on-failure
 
       - name: Linux smoke test and rendered dashboard
         if: runner.os == 'Linux'
