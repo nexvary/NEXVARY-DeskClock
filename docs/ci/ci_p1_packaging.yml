@@ -1,0 +1,200 @@
+name: AeroRadar CI
+
+on:
+  push:
+    branches: [main, 'feature/**', 'develop', 'quality/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # --- Core: C++20 library + CLI + unit tests (no Qt required) ---
+  core:
+    name: Core (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (Debug + Release)
+        run: |
+          cmake -S . -B build-debug   -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B build-release -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Debug
+        run: cmake --build build-debug   --parallel 2
+
+      - name: Build Release
+        run: cmake --build build-release --config Release --parallel 2
+
+      - name: Test Debug (24 unit tests, AERO_REQUIRE active)
+        run: ctest --test-dir build-debug   -C Debug   --output-on-failure
+
+      - name: Test Release (verify AERO_REQUIRE is not disabled by NDEBUG)
+        run: ctest --test-dir build-release -C Release --output-on-failure
+
+  # --- Desktop: Qt 6.5 + QML compile + smoke test + integration tests + packaging ---
+  desktop:
+    name: Desktop Qt (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6.5
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.*'
+          modules: 'qtquick3d'
+          cache: true
+
+      - name: Install Linux GL + Xvfb deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libgl1-mesa-dev libxcb-cursor0 libxkbcommon-x11-0 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0 \
+            xvfb x11-utils scrot nsis
+
+      - name: Install Windows packaging tools
+        if: runner.os == 'Windows'
+        run: choco install nsis --no-progress -y
+
+      - name: Configure
+        run: cmake -S . -B build -DAERORADAR_BUILD_DESKTOP=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Test Core (Release)
+        run: ctest --test-dir build -C Release -R simulator_tests --output-on-failure
+
+      - name: Test Qt integration (SimulatorModel, Release)
+        run: ctest --test-dir build -C Release -R simulator_model_tests --output-on-failure
+
+      # Linux: offscreen smoke gate
+      - name: QML smoke test — Linux offscreen
+        if: runner.os == 'Linux'
+        run: |
+          export QT_QPA_PLATFORM=offscreen
+          ./build/aeroradar_desktop --smoke > smoke_stdout.txt 2> smoke_stderr.txt
+          SMOKE_EXIT=$?
+          cat smoke_stdout.txt; cat smoke_stderr.txt
+          if [ "$SMOKE_EXIT" -ne 0 ]; then echo "FAIL: smoke exited $SMOKE_EXIT"; exit 1; fi
+          if grep -qiE "(qml.*error|failed to load|unable to load|cannot open|objectCreationFailed)" smoke_stderr.txt; then
+            echo "FAIL: QML errors in stderr"; exit 1
+          fi
+          echo "PASS: QML loaded cleanly under offscreen backend"
+
+      # Linux: Xvfb screenshot (xcb backend gives a real rendered frame)
+      - name: GUI screenshot — Linux Xvfb
+        if: runner.os == 'Linux'
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          XVFB_PID=$!
+          sleep 1
+          export DISPLAY=:99
+          ./build/aeroradar_desktop --screenshot screenshot_linux.png \
+            > screenshot_stdout.txt 2> screenshot_stderr.txt || true
+          cat screenshot_stdout.txt; cat screenshot_stderr.txt
+          kill $XVFB_PID 2>/dev/null || true
+          if [ -f screenshot_linux.png ]; then
+            echo "Screenshot saved: $(du -h screenshot_linux.png | cut -f1)"
+          else
+            echo "WARNING: screenshot not produced (display rendering may require additional GL setup)"
+          fi
+
+      # Windows: offscreen smoke gate
+      - name: QML smoke test — Windows offscreen
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $psi = New-Object System.Diagnostics.ProcessStartInfo
+          $psi.FileName = "build\Release\aeroradar_desktop.exe"
+          $psi.Arguments = "--smoke"
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $proc = [System.Diagnostics.Process]::Start($psi)
+          $stdout = $proc.StandardOutput.ReadToEnd()
+          $stderr = $proc.StandardError.ReadToEnd()
+          $proc.WaitForExit()
+          $exit = $proc.ExitCode
+          Write-Host "--- stdout ---"; Write-Host $stdout
+          Write-Host "--- stderr ---"; Write-Host $stderr
+          if ($exit -ne 0) { Write-Error "FAIL: smoke test exited $exit"; exit 1 }
+          if ($stderr -match "(?i)(qml.*error|failed to load|unable to load|objectCreationFailed)") {
+            Write-Error "FAIL: QML errors in stderr"; exit 1
+          }
+          Write-Host "PASS: QML loaded cleanly (Windows offscreen)"
+
+      # Windows: windeployqt → portable ZIP
+      - name: Windows portable ZIP (windeployqt)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $deploy = "deploy-portable"
+          New-Item -ItemType Directory -Force -Path $deploy | Out-Null
+          Copy-Item "build\Release\aeroradar_desktop.exe" $deploy\
+          windeployqt --qmldir ui\qml --release "$deploy\aeroradar_desktop.exe"
+          Compress-Archive -Path "$deploy\*" `
+            -DestinationPath "NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip" `
+            -Force
+          Write-Host "Portable ZIP: $('{0:N0}' -f (Get-Item 'NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip').Length) bytes"
+
+      # Windows: NSIS installer (uses windeployqt staging dir from previous step)
+      - name: Windows installer (NSIS)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Reuse the already-deployed directory as NSIS input
+          Rename-Item deploy-portable deploy
+          & "C:\Program Files (x86)\NSIS\makensis.exe" `
+              /DOUTDIR="$PWD" installer\aeroradar.nsi
+          if ($LASTEXITCODE -ne 0) { Write-Error "makensis failed"; exit 1 }
+          Write-Host "Installer: $('{0:N0}' -f (Get-Item 'NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe').Length) bytes"
+
+      - name: Upload desktop binary + smoke logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aeroradar-desktop-${{ matrix.os }}
+          path: |
+            build/aeroradar_desktop*
+            build/Release/aeroradar_desktop*
+            smoke_stdout.txt
+            smoke_stderr.txt
+          if-no-files-found: ignore
+
+      - name: Upload screenshot (Linux)
+        uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: aeroradar-screenshot-linux
+          path: screenshot_linux.png
+          if-no-files-found: ignore
+
+      - name: Upload Windows portable ZIP
+        uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: aeroradar-windows-portable
+          path: NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip
+          if-no-files-found: ignore
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: aeroradar-windows-installer
+          path: NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe
+          if-no-files-found: ignore

@@ -89,6 +89,10 @@ if(AERORADAR_BUILD_DESKTOP)
             Qt6::Test
             aeroradar_core)
 
-        add_test(NAME simulator_model_tests COMMAND simulator_model_tests)
+        # Name matches the existing ctest -R simulator_tests filter in ci.yml,
+        # so integration tests run in the desktop job without a workflow change.
+        add_test(NAME simulator_tests_integration COMMAND simulator_model_tests)
+        set_tests_properties(simulator_tests_integration PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     endif()
 endif()
