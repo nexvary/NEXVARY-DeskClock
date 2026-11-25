@@ -1,12 +1,12 @@
 ; installer/aeroradar.nsi
 ; NSIS installer for NEXVARY AeroRadar.
-; Run after windeployqt has populated the "deploy\" staging directory:
-;   windeployqt --qmldir ui\qml --release deploy\aeroradar_desktop.exe
-;   makensis installer\aeroradar.nsi
+; The Windows packaging workflow supplies the output path and generated payload manifest.
 ;
 ; SIMULATION ONLY — Not for navigation or air traffic control.
 
 Unicode True
+
+!include "${PAYLOAD_MANIFEST}"
 
 !define PRODUCT_NAME      "NEXVARY AeroRadar"
 !define PRODUCT_VERSION   "0.1.0"
@@ -26,7 +26,7 @@ VIAddVersionKey "ProductVersion"   "${PRODUCT_VERSION}"
 VIAddVersionKey "Comments"         "Educational / research simulation platform. SIMULATION ONLY."
 
 Name    "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe"
+OutFile "${SETUP_OUTPUT}"
 
 InstallDir          "$PROGRAMFILES64\Nexvary\AeroRadar"
 InstallDirRegKey    HKLM "${PRODUCT_UNINST_KEY}" "InstallLocation"
@@ -62,8 +62,10 @@ SetCompressor       /SOLID lzma
 
 Section "AeroRadar (required)" SecMain
     SectionIn RO
+    IfFileExists "$INSTDIR\Uninstall.exe" payloadCollision
+    !insertmacro CheckPayload
+    !insertmacro InstallPayload
     SetOutPath "$INSTDIR"
-    File /r "deploy\*.*"
 
     WriteUninstaller "$INSTDIR\Uninstall.exe"
 
@@ -82,6 +84,11 @@ Section "AeroRadar (required)" SecMain
                     "$INSTDIR\${PRODUCT_EXE}" "" \
                     "$INSTDIR\${PRODUCT_EXE}" 0 \
                     SW_SHOWNORMAL "" "NEXVARY AeroRadar simulation"
+    Goto installed
+payloadCollision:
+    SetErrorLevel 1
+    Abort "The installation would overwrite an existing file. Uninstall AeroRadar or select another folder."
+installed:
 SectionEnd
 
 Section "Desktop shortcut" SecDesktop
@@ -104,8 +111,9 @@ LangString DESC_SecDesktop ${LANG_ENGLISH} \
 ; ---- Uninstaller -------------------------------------------------------------
 
 Section "Uninstall"
-    ; Remove application files
-    RMDir /r "$INSTDIR"
+    !insertmacro RemovePayload
+    Delete "$INSTDIR\Uninstall.exe"
+    RMDir "$INSTDIR"
 
     ; Remove shortcuts
     Delete "$SMPROGRAMS\Nexvary\AeroRadar.lnk"
