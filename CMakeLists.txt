@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
-project(NexvaryDeskClock VERSION 0.1.0 LANGUAGES CXX)
+# Project renamed from NexvaryDeskClock to NexvaryAeroRadar to match product identity.
+project(NexvaryAeroRadar VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -44,8 +45,22 @@ if(AERORADAR_BUILD_DESKTOP)
         apps/desktop/SimulatorModel.cpp
     )
     target_include_directories(aeroradar_desktop PRIVATE apps/desktop)
+
+    # AeroTheme.qml is a pragma Singleton; mark it so qt_add_qml_module
+    # emits the correct qmldir singleton entry automatically.
+    set_source_files_properties(ui/qml/AeroTheme.qml
+        PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
     qt_add_qml_module(aeroradar_desktop URI AeroRadar VERSION 1.0
-        QML_FILES ui/qml/Main.qml)
+        QML_FILES
+            ui/qml/Main.qml
+            ui/qml/AeroTheme.qml
+            ui/qml/RadarPpi.qml
+            ui/qml/StatusStrip.qml
+            ui/qml/FlightInstruments.qml
+            ui/qml/SimulationControls.qml
+    )
+
     target_link_libraries(aeroradar_desktop PRIVATE
         Qt6::Quick
         Qt6::QuickControls2
