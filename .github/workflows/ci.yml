@@ -1,8 +1,8 @@
-﻿name: AeroRadar CI
+name: AeroRadar CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'develop']
+    branches: [main, 'feature/**', 'develop', 'quality/**']
   pull_request:
 
 permissions:
@@ -26,18 +26,18 @@ jobs:
           cmake -S . -B build-release -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
 
       - name: Build Debug
-        run: cmake --build build-debug   --parallel 2
+        run: cmake --build build-debug --config Debug --parallel 2
 
       - name: Build Release
         run: cmake --build build-release --config Release --parallel 2
 
-      - name: Test Debug (19 unit tests, AERO_REQUIRE active)
-        run: ctest --test-dir build-debug   -C Debug   --output-on-failure
+      - name: Test Debug (24 unit tests, AERO_REQUIRE active)
+        run: ctest --test-dir build-debug   -C Debug   --no-tests=error --output-on-failure
 
       - name: Test Release (verify AERO_REQUIRE is not disabled by NDEBUG)
-        run: ctest --test-dir build-release -C Release --output-on-failure
+        run: ctest --test-dir build-release -C Release --no-tests=error --output-on-failure
 
-  # --- Desktop: Qt 6.5 + QML compile + gated smoke test ---
+  # --- Desktop: Qt 6.5 + QML compile + smoke test + integration tests + packaging ---
   desktop:
     name: Desktop Qt (${{ matrix.os }})
     strategy:
@@ -62,7 +62,11 @@ jobs:
           sudo apt-get install -y libgl1-mesa-dev libxcb-cursor0 libxkbcommon-x11-0 \
             libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
             libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0 \
-            xvfb x11-utils
+            xvfb xauth
+
+      - name: Install Windows packaging tools
+        if: runner.os == 'Windows'
+        run: choco install nsis --no-progress -y
 
       - name: Configure
         run: cmake -S . -B build -DAERORADAR_BUILD_DESKTOP=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
@@ -71,72 +75,160 @@ jobs:
         run: cmake --build build --config Release --parallel 2
 
       - name: Test Core (Release)
-        run: ctest --test-dir build -C Release -R simulator_tests --output-on-failure
+        run: ctest --test-dir build -C Release -R '^simulator_tests--no-tests=error --output-on-failure
 
-      # Linux smoke test: --smoke flag causes app to load QML, wait 1500 ms, exit 0 on success.
-      # QT_QPA_PLATFORM=offscreen: headless rendering via Qt's offscreen backend.
-      # Exit code 0  = QML loaded correctly (PASS).
-      # Exit code 1  = QML object creation failed or root objects empty (FAIL).
-      # Any stderr matching QML error patterns also fails CI.
-      - name: QML smoke test â€” Linux offscreen
+      - name: Test Qt integration (SimulatorModel, Release)
+        run: ctest --test-dir build -C Release -R '^simulator_tests_integration --no-tests=error --output-on-failure
+
+ --no-tests=error --output-on-failure
+
+      - name: Test Qt integration (SimulatorModel, Release)
+        run: ctest --test-dir build -C Release -R simulator_model_tests --no-tests=error --output-on-failure
+
+ --no-tests=error --output-on-failure
+
+ --no-tests=error --output-on-failure
+
+      - name: Test Qt integration (SimulatorModel, Release)
+        run: ctest --test-dir build -C Release -R simulator_model_tests --no-tests=error --output-on-failure
+
+      - name: Linux smoke test and rendered dashboard
         if: runner.os == 'Linux'
+        env:
+          QT_QUICK_BACKEND: software
         run: |
-          export QT_QPA_PLATFORM=offscreen
-          ./build/aeroradar_desktop --smoke > smoke_stdout.txt 2> smoke_stderr.txt
-          SMOKE_EXIT=$?
-          echo "--- stdout ---"
-          cat smoke_stdout.txt
-          echo "--- stderr ---"
-          cat smoke_stderr.txt
-          if [ "$SMOKE_EXIT" -ne 0 ]; then
-            echo "FAIL: smoke test exited with code $SMOKE_EXIT"
-            exit 1
-          fi
-          if grep -qiE "(qml.*error|failed to load|unable to load|cannot open|objectCreationFailed)" smoke_stderr.txt; then
-            echo "FAIL: QML errors detected in stderr"
-            exit 1
-          fi
-          echo "PASS: QML loaded cleanly under offscreen backend"
+          QT_QPA_PLATFORM=offscreen timeout 30s ./build/aeroradar_desktop --smoke
+          QT_QPA_PLATFORM=xcb timeout 30s xvfb-run -a -s '-screen 0 1600x1000x24' \
+            ./build/aeroradar_desktop --screenshot screenshot_linux.png
+          test -s screenshot_linux.png
 
-      # Windows smoke test: same --smoke flag, QT_QPA_PLATFORM=offscreen.
-      - name: QML smoke test â€” Windows offscreen
+      - name: Deploy Qt and build Windows packages
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $env:QT_QPA_PLATFORM = "offscreen"
-          $psi = New-Object System.Diagnostics.ProcessStartInfo
-          $psi.FileName = "build\Release\aeroradar_desktop.exe"
-          $psi.Arguments = "--smoke"
-          $psi.RedirectStandardOutput = $true
-          $psi.RedirectStandardError = $true
-          $psi.UseShellExecute = $false
-          $proc = [System.Diagnostics.Process]::Start($psi)
-          $stdout = $proc.StandardOutput.ReadToEnd()
-          $stderr = $proc.StandardError.ReadToEnd()
-          $proc.WaitForExit()
-          $exit = $proc.ExitCode
-          Write-Host "--- stdout ---"
-          Write-Host $stdout
-          Write-Host "--- stderr ---"
-          Write-Host $stderr
-          if ($exit -ne 0) {
-            Write-Error "FAIL: smoke test exited $exit"
-            exit 1
+          $deploy = New-Item -ItemType Directory -Path "$PWD/deploy-portable"
+          $app = Join-Path $deploy.FullName aeroradar_desktop.exe
+          Copy-Item build/Release/aeroradar_desktop.exe $app
+          & windeployqt --qmldir "$PWD/ui/qml" --release $app
+          if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
+          foreach ($file in @('Qt6Core.dll', 'Qt6Qml.dll', 'Qt6Quick.dll',
+              'platforms/qwindows.dll', 'qml/QtQuick/qmldir', 'qml/QtQuick/Controls/qmldir')) {
+            if (!(Test-Path (Join-Path $deploy.FullName $file) -PathType Leaf)) {
+              throw "Missing deployed file: $file"
+            }
           }
-          if ($stderr -match "(?i)(qml.*error|failed to load|unable to load|objectCreationFailed)") {
-            Write-Error "FAIL: QML errors in stderr"
-            exit 1
-          }
-          Write-Host "PASS: QML loaded cleanly under offscreen backend (Windows)"
 
-      - name: Upload desktop binary + smoke logs
+          $files = @(Get-ChildItem $deploy.FullName -Recurse -File | Sort-Object FullName)
+          $directories = @(Get-ChildItem $deploy.FullName -Recurse -Directory |
+            Sort-Object { $_.FullName.Length } -Descending)
+          $manifest = @(
+            '!macro CheckPayload'
+            foreach ($file in $files) {
+              $relative = [IO.Path]::GetRelativePath($deploy.FullName, $file.FullName)
+              '  IfFileExists "$INSTDIR\{0}" payloadCollision' -f $relative
+            }
+            '!macroend'
+            '!macro InstallPayload'
+            foreach ($file in $files) {
+              $relativeDir = [IO.Path]::GetRelativePath($deploy.FullName, $file.DirectoryName)
+              '  SetOutPath "$INSTDIR\{0}"' -f $relativeDir
+              '  File "{0}"' -f $file.FullName
+            }
+            '!macroend'
+            '!macro RemovePayload'
+            foreach ($file in $files) {
+              $relative = [IO.Path]::GetRelativePath($deploy.FullName, $file.FullName)
+              '  Delete "$INSTDIR\{0}"' -f $relative
+            }
+            foreach ($dir in $directories) {
+              $relative = [IO.Path]::GetRelativePath($deploy.FullName, $dir.FullName)
+              '  RMDir "$INSTDIR\{0}"' -f $relative
+            }
+            '!macroend'
+          )
+          $manifestPath = Join-Path $PWD payload.nsh
+          Set-Content -LiteralPath $manifestPath -Value $manifest -Encoding utf8BOM
+          $prefix = 'NEXVARY-AeroRadar-P1-Windows-x64'
+          Compress-Archive -Path "$($deploy.FullName)\*" -DestinationPath "$prefix-Portable.zip"
+          $setup = Join-Path $PWD "$prefix-Setup.exe"
+          $nsis = Join-Path ([Environment]::GetEnvironmentVariable('ProgramFiles(x86)')) 'NSIS\makensis.exe'
+          & $nsis "/DPAYLOAD_MANIFEST=$manifestPath" "/DSETUP_OUTPUT=$setup" installer/aeroradar.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed: $LASTEXITCODE" }
+
+      - name: Verify portable startup, installation and safe uninstallation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem Env: | Where-Object Name -Match '^(QT|QML)' |
+            ForEach-Object { Remove-Item "Env:$($_.Name)" }
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
+          $env:QT_QPA_PLATFORM = 'offscreen'
+          $env:QT_QUICK_BACKEND = 'software'
+
+          function Invoke-CheckedProcess($file, $arguments, $workingDirectory) {
+            $process = Start-Process -FilePath $file -ArgumentList $arguments -WorkingDirectory $workingDirectory -PassThru
+            if (!$process.WaitForExit(60000)) {
+              Stop-Process -Id $process.Id -Force
+              throw "Timed out: $file"
+            }
+            if ($process.ExitCode -ne 0) { throw "$file exited with $($process.ExitCode)" }
+          }
+
+          $prefix = 'NEXVARY-AeroRadar-P1-Windows-x64'
+          $portable = Join-Path $env:RUNNER_TEMP 'AeroRadar Portable'
+          Expand-Archive "$prefix-Portable.zip" $portable
+          Invoke-CheckedProcess "$portable\aeroradar_desktop.exe" '--smoke' $portable
+
+          $install = Join-Path $env:RUNNER_TEMP 'AeroRadar Installed'
+          New-Item -ItemType Directory -Path "$install\platforms" | Out-Null
+          Set-Content "$install\user-data.txt" 'preserve user data'
+          Set-Content "$install\platforms\unrelated.txt" 'preserve nested files'
+          $setup = Join-Path $PWD "$prefix-Setup.exe"
+          Invoke-CheckedProcess $setup "/S /D=$install" "$PWD"
+          Invoke-CheckedProcess "$install\aeroradar_desktop.exe" '--smoke' $install
+
+          # Use a copy to wait for the real NSIS uninstaller process.
+          $uninstaller = Join-Path $env:RUNNER_TEMP 'AeroRadar-Uninstall.exe'
+          Copy-Item "$install\Uninstall.exe" $uninstaller
+          Invoke-CheckedProcess $uninstaller "/S _?=$install" $env:RUNNER_TEMP
+          if ((Get-Content "$install\user-data.txt" -Raw).Trim() -ne 'preserve user data' -or
+              (Get-Content "$install\platforms\unrelated.txt" -Raw).Trim() -ne 'preserve nested files') {
+            throw 'Uninstallation changed unrelated files'
+          }
+          $remaining = @(Get-ChildItem $install -Recurse -Force -File)
+          if ($remaining.Count -ne 2) { throw 'Unexpected files remain after uninstall' }
+
+          foreach ($file in @("$prefix-Portable.zip", "$prefix-Setup.exe")) {
+            $item = Get-Item -LiteralPath $file
+            if ($item.Length -eq 0) { throw "Empty artifact: $file" }
+            $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $file" | Tee-Object -FilePath "$file.sha256"
+          }
+
+      - name: Upload rendered dashboard
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: aeroradar-desktop-${{ matrix.os }}
+          name: aeroradar-screenshot-linux
+          path: screenshot_linux.png
+          if-no-files-found: error
+
+      - name: Upload Windows portable ZIP and checksum
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aeroradar-windows-portable
           path: |
-            build/aeroradar_desktop*
-            build/Release/aeroradar_desktop*
-            smoke_stdout.txt
-            smoke_stderr.txt
-          if-no-files-found: ignore
+            NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip
+            NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip.sha256
+          if-no-files-found: error
+
+      - name: Upload Windows installer and checksum
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aeroradar-windows-installer
+          path: |
+            NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe
+            NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe.sha256
+          if-no-files-found: error
