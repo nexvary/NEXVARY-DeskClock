@@ -71,4 +71,24 @@ if(AERORADAR_BUILD_DESKTOP)
     else()
         target_compile_options(aeroradar_desktop PRIVATE -Wall -Wextra)
     endif()
+
+    # --- Qt integration tests (QTest) ---
+    # Test SimulatorModel pause/resume/reset/selectTrack/signals in isolation
+    # from QML. Requires Qt6::Test.
+    if(BUILD_TESTING)
+        find_package(Qt6 REQUIRED COMPONENTS Test)
+
+        qt_add_executable(simulator_model_tests
+            tests/integration/SimulatorModelTests.cpp
+            apps/desktop/SimulatorModel.cpp
+        )
+        target_include_directories(simulator_model_tests PRIVATE apps/desktop tests)
+        target_link_libraries(simulator_model_tests PRIVATE
+            Qt6::Quick
+            Qt6::QuickControls2
+            Qt6::Test
+            aeroradar_core)
+
+        add_test(NAME simulator_model_tests COMMAND simulator_model_tests)
+    endif()
 endif()

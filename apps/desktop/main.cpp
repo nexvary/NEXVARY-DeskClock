@@ -2,15 +2,26 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
+#include <QString>
 #include <QTimer>
 #include <cstring>
 
 int main(int argc, char* argv[]) {
-    // --smoke: load QML via offscreen, wait 1500 ms, exit 0 if no errors.
-    // Used as CI startup gate: distinguishes clean load from crash/QML failure.
-    bool smokeMode = false;
-    for (int i = 1; i < argc; ++i)
-        if (std::strcmp(argv[i], "--smoke") == 0) { smokeMode = true; break; }
+    // --smoke:       load QML, wait 1500 ms, exit 0 if clean.
+    // --screenshot <path>: load QML, wait 2500 ms, grab window, save to <path>, exit 0.
+    bool    smokeMode      = false;
+    bool    screenshotMode = false;
+    QString screenshotPath;
+
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--smoke") == 0) {
+            smokeMode = true;
+        } else if (std::strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
+            screenshotMode = true;
+            screenshotPath = argv[++i];
+        }
+    }
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("NEXVARY AeroRadar");
@@ -22,7 +33,6 @@ int main(int argc, char* argv[]) {
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("simulator", &simulatorModel);
 
-    // Track QML load errors
     bool qmlObjectFailed = false;
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
                      &app, [&qmlObjectFailed]() { qmlObjectFailed = true; },
@@ -44,6 +54,37 @@ int main(int argc, char* argv[]) {
                 qDebug("SMOKE PASS: QML loaded and running cleanly");
                 app.exit(0);
             }
+        });
+    }
+
+    if (screenshotMode) {
+        QTimer::singleShot(2500, &app, [&app, &engine, &qmlObjectFailed, screenshotPath]() {
+            if (qmlObjectFailed || engine.rootObjects().isEmpty()) {
+                qCritical("SCREENSHOT FAIL: QML not loaded");
+                app.exit(1);
+                return;
+            }
+            auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+            if (!window) {
+                qCritical("SCREENSHOT FAIL: root object is not a QQuickWindow");
+                app.exit(1);
+                return;
+            }
+            const QImage img = window->grabWindow();
+            if (img.isNull()) {
+                qCritical("SCREENSHOT FAIL: grabWindow() returned null image");
+                app.exit(1);
+                return;
+            }
+            if (!img.save(screenshotPath)) {
+                qCritical("SCREENSHOT FAIL: could not save to %s",
+                          qPrintable(screenshotPath));
+                app.exit(1);
+                return;
+            }
+            qDebug("SCREENSHOT SAVED: %s (%dx%d)",
+                   qPrintable(screenshotPath), img.width(), img.height());
+            app.exit(0);
         });
     }
 
