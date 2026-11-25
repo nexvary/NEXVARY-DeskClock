@@ -2,8 +2,8 @@
 
 **Last updated:** 2026-11-25  
 **Branch:** `feature/p1-qml-components`  
-**Head commit:** `1612093461576c8d511f6b567902a369f47e0d54`  
-**CI:** ✅ AeroRadar CI — success | ✅ Source Hygiene — success
+**Verified build commit:** `b241bf7b16d2d1b1772f116ab80062b3a408995c`  
+**CI:** [AeroRadar CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/45560516711) and [Source Hygiene](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/45560516687) passed.
 
 ---
 
@@ -34,70 +34,31 @@
 | **CMakeLists.txt** | All 6 QML files registered; `QT_QML_SINGLETON_TYPE`; renamed `NexvaryAeroRadar` | ✅ |
 | **24 unit tests (+5 new)** | `pause_idempotent`, `resume_idempotent`, `reset_while_running_stays_running`, `step_count_per_step`, `empty_aircraft_list` | ✅ Debug + Release |
 | **QML offscreen smoke test** | `--smoke` flag, Linux + Windows offscreen | ✅ |
-| **Qt integration tests (QTest)** | `tests/integration/SimulatorModelTests.cpp` — 11 QTest cases via QSignalSpy | ✅ Builds; runs as `simulator_tests_integration` via existing ctest filter |
-| **NSIS installer script** | `installer/aeroradar.nsi` | In repo; CI execution blocked (see below) |
-| **`--screenshot <path>` mode** | `apps/desktop/main.cpp` | In repo; CI step blocked (see below) |
-| **docs/ci/ci_p1_packaging.yml** | Full packaging workflow ready | In repo (documentation) |
+| **Qt integration tests (QTest)** | `tests/integration/SimulatorModelTests.cpp` — 11 QTest cases via QSignalSpy | ✅ Passed as `simulator_tests_integration` via an exact CTest filter |
+| **NSIS installer script** | `installer/aeroradar.nsi` | Verified on Windows Server 2022 |
+| **`--screenshot <path>` mode** | `apps/desktop/main.cpp` | Verified on Linux Xvfb at 1440 × 900 and 1200 × 760 |
+| **docs/ci/ci_p1_packaging.yml** | Reference copy of the active P1 packaging workflow | In repo (documentation) |
 | **README.md** | Added | ✅ |
 
 ---
 
-## Blockers — workflow scope
+## P1 packaging and QA
 
-Updating `.github/workflows/ci.yml` requires the GitHub OAuth **`workflow`** scope.  
-The `nexvary` CLI token has: `gist`, `read:org`, `repo` — **`workflow` is absent**.
+The workflow was committed from GitHub’s web editor on the P1 branch. CI requires both desktop CTest entries to exist and pass. Windows packaging uses `windeployqt` for the Qt runtime, QML imports and Windows platform plugin, and includes the Visual C++ runtime DLLs.
 
-The complete updated workflow is committed at `docs/ci/ci_p1_packaging.yml` and adds:
+The Windows Server 2022 job started both the extracted portable build and the installed application with the native Qt Windows plugin and the Qt development paths removed. It then uninstalled the application and confirmed that unrelated files at the installation root and in a nested directory retained their contents. The NSIS uninstaller removes files listed in the build payload and removes directories only when empty.
 
-| Step | Platform | What it produces |
-|---|---|---|
-| `ctest -R simulator_tests` (expanded) | Ubuntu + Windows | Runs `simulator_tests_integration` (already works via rename — no ci.yml change needed) |
-| Xvfb screenshot | Ubuntu | `screenshot_linux.png` CI artifact |
-| `windeployqt` → ZIP | Windows | `NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip` CI artifact |
-| `makensis` | Windows | `NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe` CI artifact |
-
-**To unblock:** apply `docs/ci/ci_p1_packaging.yml` to `.github/workflows/ci.yml` via the GitHub web UI  
-(browser session uses full user permissions, not the CLI token).  
-URL: `https://github.com/nexvary/NEXVARY-DeskClock/edit/feature/p1-qml-components/.github/workflows/ci.yml`
-
----
-
-## Remaining P1 artifacts (blocked on CI workflow update)
-
-| Artifact | Status | Blocker |
-|---|---|---|
-| `NEXVARY-AeroRadar-P1-Windows-x64-Portable.zip` | Not produced | `workflow` OAuth scope |
-| `NEXVARY-AeroRadar-P1-Windows-x64-Setup.exe` | Not produced | `workflow` OAuth scope |
-| `screenshot_linux.png` (GUI) | Not produced | `workflow` OAuth scope |
-
----
-
-## Note on Qt integration test execution (resolved without ci.yml change)
-
-The CTest test name `simulator_tests_integration` was chosen so that the existing  
-`ctest -R simulator_tests` command in `ci.yml` matches it via substring regex.  
-`set_tests_properties(... ENVIRONMENT "QT_QPA_PLATFORM=offscreen")` makes it  
-headless-safe. No workflow file change is needed for the integration tests to run.
-
----
-
-## Other Nexvary repository assessment
-
-| Repository | Outcome |
+| Deliverable | GitHub Actions artifact |
 |---|---|
-| `nexvary/NEXVARY-Avionics-Lab` | Not found / inaccessible (November 2026) |
-| `nexvary/NEXVARY-Aviation-Navigator` | Not found / inaccessible (November 2026) |
-| `nexvary/Aegis-CUAS-Command` | Not found / inaccessible (November 2026) |
+| Windows x64 installer and SHA-256 file | [Download](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/45560516711/artifacts/14997771843) |
+| Windows x64 portable ZIP and SHA-256 file | [Download](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/45560516711/artifacts/14997856252) |
+| Running dashboard at 1440 × 900 and 1200 × 760 | [Download](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/45560516711/artifacts/14997492887) |
 
-No external components imported. AeroRadar develops independently.
-
----
+Visual review confirmed the synthetic radar tracks, aircraft details and icons, controls, panel alignment, Nexvary branding and the simulation-only warning at both sizes.
 
 ## Known limitations
 
-- Track motion: constant-velocity planar, no geodesy or flight dynamics.
-- Weather/scenario/environment fields: hardcoded presentation placeholders.
-- Simulation indicator reflects actual `SimulatorModel::isPaused()` (not hardcoded).
-- Windows ZIP, installer, and screenshots require CI workflow update (see blockers).
-- Binaries are unsigned (no digital signature).
-- 3-D scene and Arabic RTL: planned P2.
+- The Windows packages are unsigned. Verification used the hosted Windows runner and a silent installation. Interactive installer and dashboard review on a physical Windows device remain unverified.
+- Some secondary dashboard labels are small and low-contrast. The visual evidence was captured on Linux.
+- Track motion uses constant-velocity planar simulation. Weather and scenario metadata are presentation placeholders. The application is for civilian research and synthetic simulation.
+- 3-D scene and Arabic RTL are planned for P2.
