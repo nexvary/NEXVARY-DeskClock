@@ -88,7 +88,10 @@ jobs:
           QT_QPA_PLATFORM=offscreen timeout 30s ./build/aeroradar_desktop --smoke
           QT_QPA_PLATFORM=xcb timeout 30s xvfb-run -a -s '-screen 0 1600x1000x24' \
             ./build/aeroradar_desktop --screenshot screenshot_linux.png
+          QT_QPA_PLATFORM=xcb timeout 30s xvfb-run -a -s '-screen 0 1600x1000x24' \
+            ./build/aeroradar_desktop --screenshot-resized screenshot_linux_resized.png
           test -s screenshot_linux.png
+          test -s screenshot_linux_resized.png
 
       - name: Deploy Qt and build Windows packages
         if: runner.os == 'Windows'
@@ -97,9 +100,15 @@ jobs:
           $deploy = New-Item -ItemType Directory -Path "$PWD/deploy-portable"
           $app = Join-Path $deploy.FullName aeroradar_desktop.exe
           Copy-Item build/Release/aeroradar_desktop.exe $app
-          & windeployqt --qmldir "$PWD/ui/qml" --release $app
+          & windeployqt --no-compiler-runtime --qmldir "$PWD/ui/qml" --release $app
           if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
-          foreach ($file in @('Qt6Core.dll', 'Qt6Qml.dll', 'Qt6Quick.dll',
+          $vswhere = Join-Path ([Environment]::GetEnvironmentVariable('ProgramFiles(x86)')) 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $visualStudio = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $crt = Get-ChildItem "$visualStudio\VC\Redist\MSVC\*\x64\Microsoft.VC143.CRT" -Directory |
+            Sort-Object { [version]$_.Parent.Parent.Name } -Descending | Select-Object -First 1
+          if (!$crt) { throw 'Visual C++ x64 redistributable DLLs not found' }
+          Copy-Item "$($crt.FullName)\*.dll" $deploy.FullName
+          foreach ($file in @('msvcp140.dll', 'vcruntime140.dll', 'Qt6Core.dll', 'Qt6Qml.dll', 'Qt6Quick.dll',
               'platforms/qwindows.dll', 'qml/QtQuick/qmldir', 'qml/QtQuick/Controls/qmldir')) {
             if (!(Test-Path (Join-Path $deploy.FullName $file) -PathType Leaf)) {
               throw "Missing deployed file: $file"
@@ -150,15 +159,17 @@ jobs:
           Get-ChildItem Env: | Where-Object Name -Match '^(QT|QML)' |
             ForEach-Object { Remove-Item "Env:$($_.Name)" }
           $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
-          $env:QT_QPA_PLATFORM = 'offscreen'
+          $env:QT_QPA_PLATFORM = 'windows'
           $env:QT_QUICK_BACKEND = 'software'
 
           function Invoke-CheckedProcess($file, $arguments, $workingDirectory) {
-            $process = Start-Process -FilePath $file -ArgumentList $arguments -WorkingDirectory $workingDirectory -PassThru
+            $stderr = Join-Path $env:RUNNER_TEMP 'aeroradar-process-stderr.log'
+            $process = Start-Process -FilePath $file -ArgumentList $arguments -WorkingDirectory $workingDirectory -RedirectStandardError $stderr -PassThru
             if (!$process.WaitForExit(60000)) {
               Stop-Process -Id $process.Id -Force
               throw "Timed out: $file"
             }
+            Get-Content -LiteralPath $stderr
             if ($process.ExitCode -ne 0) { throw "$file exited with $($process.ExitCode)" }
           }
 
@@ -198,7 +209,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aeroradar-screenshot-linux
-          path: screenshot_linux.png
+          path: |
+            screenshot_linux.png
+            screenshot_linux_resized.png
           if-no-files-found: error
 
       - name: Upload Windows portable ZIP and checksum
