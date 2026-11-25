@@ -39,17 +39,17 @@ Rectangle {
             // Simulation-only warning badge
             Rectangle {
                 height: 28; radius: 4
-                width: warnText.implicitWidth + 24
+                implicitWidth: warningRow.implicitWidth + 24
                 color: "#2a1800"
                 border.color: AeroTheme.accentAmber; border.width: 1
                 Row {
+                    id: warningRow
                     anchors.centerIn: parent; spacing: 6
                     Text {
                         text: "WARNING"
                         font.pixelSize: 10; font.bold: true; color: AeroTheme.accentAmber
                     }
                     Text {
-                        id: warnText
                         text: "SIMULATION ONLY  |  NO LIVE DATA"
                         font.pixelSize: 11; font.bold: true; color: AeroTheme.accentAmber
                     }
@@ -59,7 +59,7 @@ Rectangle {
             // Run / Paused status pill
             Rectangle {
                 height: 28; radius: 4
-                width: runLabel.implicitWidth + 28
+                implicitWidth: runLabel.implicitWidth + 28
                 color: strip.simulator && !strip.simulator.paused ? "#0a2a10" : "#1a1a0a"
                 border.color: strip.simulator && !strip.simulator.paused
                               ? AeroTheme.accentGreen : AeroTheme.accentAmber
