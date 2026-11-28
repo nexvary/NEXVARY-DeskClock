@@ -34,6 +34,18 @@ On Debian 13 with GCC 14.2.0, CMake 4.4.5 and Qt 6.5.3, separate build directori
 
 An additional runtime check of the desktop identified repeated Canvas font errors that the original startup check missed, and a mismatch between the fixed-wing icon's rotation and its heading vector. Follow-up commit `826d6e5e16c9c01741cc3df86cab5f182aeb7ac2` uses a portable Canvas font and consistent heading rotation. CTest checks the font error and the smoke command fails on warnings from the QML engine. Linux GCC/Qt Debug and Release builds passed all three CTest entries after the follow-up.
 
+### Hosted P0
+
+The exact P0 PR head `413afb08b75964735af2c9887e9666b20719a742` passed both CI trigger runs and both source-hygiene runs. Results cover GCC and Clang on Ubuntu, MSVC on Windows, and Qt desktop Debug and Release on both systems. The Windows desktop job completed portable startup, silent install, installed startup and removal while keeping unrelated files. [PR #7](https://github.com/nexvary/NEXVARY-DeskClock/pull/7) · [PR CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411) · [Push CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186040183) · [Hygiene](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080459)
+
+GitHub published the [Windows installer](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15280031036), [portable ZIP](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15280016046), and [Linux screenshots](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15279523171) as workflow candidates.
+
+## 2026-11-28 — P1 desktop workspaces
+
+Branch `engineering/p1-desktop-workspaces` starts at the tested P0 head. Commit `c9cf509b6776bf8ea0b38353e27437f9f066517c` adds functional workspace navigation, keyboard and pointer controls, and a reusable track list with stable delegates. It replaces the empty 3D panel and fictitious weather, terrain and timeline values with current model data and removes duplicate playback controls. Commit `464041211d0bdf64aacd3c2a04c60722e2a90609` adds a persisted light/dark appearance setting and updates shared UI and PPI colors.
+
+Local Debian 13, GCC 14.2.0 and Qt 6.5.3 builds passed Debug and Release CTest (4/4 entries in each). The dashboard tests opened the actual QML window, exercised Tab and Space navigation, stable track focus through a simulation tick, track selection, keyboard appearance switching, persistence after window recreation, and pointer pause, reset and resume. Release produced dark 1440×900 and 1200×760 images and a light 1200×760 image offscreen. Source hygiene passed.
+
 ### Remaining work
 
-Run the changed branch against the full Windows/Linux and compiler matrix, inspect packaging, and resolve upstream integration gates. Resume P1 with functional workspace navigation, removal of placeholder panels, and keyboard/pointer interaction coverage. Phase acceptance and all remaining requirements are recorded in [feature parity](FEATURE-PARITY.md).
+Upstream draft integration and redistribution review remain open. Complete the remaining P1 workspace, assistive technology, high-DPI and multi-display verification alongside model and data stages. The dependency-ready P2 slice is fixed-step playback and a shared built-in scenario. See [feature parity](FEATURE-PARITY.md).
