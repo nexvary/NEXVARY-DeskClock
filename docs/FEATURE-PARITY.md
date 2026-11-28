@@ -97,7 +97,7 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 
 | Feature ID | Requirement | Implementation | Status | Priority | Source Files | Tests | Evidence | Remaining Gap | Next Action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P4-01 | 3D scene architecture | — | Missing | P4 | — | — | — | 3D scene architecture | Implement 3d scene architecture with acceptance tests |
+| P4-01 | 3D scene architecture | Qt Quick 3D evaluated as the required renderer | Blocked | P4 | THIRD_PARTY_ADOPTION_MATRIX.md | — | Official Qt licensing review | Approved commercial or compatible GPLv3 distribution route | Select and document the licensing route before adoption |
 | P4-02 | Civil aircraft models | — | Missing | P4 | — | — | — | Civil aircraft models | Implement civil aircraft models with acceptance tests |
 | P4-03 | Synthetic flight paths in 3D | — | Missing | P4 | — | — | — | Synthetic flight paths in 3D | Implement synthetic flight paths in 3d with acceptance tests |
 | P4-04 | Altitude visualization | — | Missing | P4 | — | — | — | Altitude visualization | Implement altitude visualization with acceptance tests |

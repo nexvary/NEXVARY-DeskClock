@@ -119,7 +119,7 @@ AeroRadar is a research and educational simulation tool:
 ## Licence
 
 See [contribution guidelines](CONTRIBUTING.md), [engineering instructions](AGENTS.md) and [security reporting](SECURITY.md).
-The repository currently has no explicit open-source license grant for NEXVARY source. See the [dependency and license review](docs/THIRD_PARTY_ADOPTION_MATRIX.md).
+Copyright (c) 2026 Nexvary Inc. All rights reserved. No license has been granted for reuse or redistribution. See the [dependency and license review](docs/THIRD_PARTY_ADOPTION_MATRIX.md).
 
 ---
 

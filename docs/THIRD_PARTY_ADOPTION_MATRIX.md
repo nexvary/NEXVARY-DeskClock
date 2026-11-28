@@ -35,7 +35,7 @@ Qt documents commercial and open-source licensing options, including GPL-only mo
 | NSIS | Keep the existing Windows packaging tool | Verify version and plugin licenses against the packaged installer. Hosted Windows build is repeatable, interactive upgrade remains open. |
 | Visual C++ runtime | Keep the existing app-local deployment in candidate artifacts | Audit exact redistributable binaries and Microsoft distribution terms before release. |
 | JSBSim and BlueSky | Reference only for now | P2 starts with the existing native kernel and a testable scenario contract. Before any adoption, pin a candidate revision and assess maintenance history, security reports, Windows/Linux CI, model validation, performance and transitive licensing. |
-| Qt Quick 3D | Evaluate at P4 | Prefer the existing Qt integration path if the exact module license, redistribution route, rendering support and hardware benchmarks satisfy the release gate. |
+| Qt Quick 3D | Block product adoption pending license route | The official module documentation lists commercial and GPLv3 terms. The repository reserves all rights. An approved commercial license or a compatible licensing decision is required before incorporating the module into a distributable product. Hardware support and benchmarks remain open. |
 
 ---
 
@@ -50,6 +50,16 @@ Qt documents commercial and open-source licensing options, including GPL-only mo
 | FlightGear | github.com/FlightGear/flightgear | GPL-2.0+ | Inspiration only; GPL prevents embedding | ➖ N/A |
 
 ---
+
+### Upstream review on 2026-11-28
+
+| Candidate | Observed evidence | Decision |
+| --- | --- | --- |
+| JSBSim | GitHub reported LGPL-2.1, an active repository and a 2026-11-27 push. The upstream library is native C++. [Repository](https://github.com/JSBSim-Team/jsbsim) | Retain as an evaluation candidate for civil flight dynamics. Keep the current core while exact-version licensing, dependency advisories, Windows/Linux toolchain compatibility, validated model fixtures and runtime performance still need checking. |
+| BlueSky | GitHub reported MIT, an active repository and a 2026-10-12 push. The simulator and plugin API are Python-based. [Repository](https://github.com/TUDelft-CNS-ATM/bluesky) | Reference for scenario and traffic research only. Embedding would add a Python runtime and an integration and packaging burden to the C++20/Qt desktop. |
+| Qt Quick 3D | Official module terms are commercial or GPLv3. [Module licensing](https://doc.qt.io/qt-6/qtquick3d-index.html#licenses-and-attributions) | Defer making it a product dependency until a license route is approved. The 2D application uses Qt Base and Qt Declarative. |
+
+No new runtime dependency was adopted in this review.
 
 ## 3. Air traffic and autopilot simulation
 
@@ -114,6 +124,7 @@ documented and tested against published schema fixtures (not private source).
 
 | Date | Reviewer | Change |
 |------|----------|--------|
+| 2026-11-28 | Upstream review | Verified JSBSim, BlueSky and Qt Quick 3D decisions from primary sources |
 | 2026-11-28 | P0 repository audit | Corrected Qt licensing entry and recorded packaging dependencies and P4 review gate |
 | 2026-11-22 | Claude (P0 audit) | Initial matrix created; no code adoptions |
 
