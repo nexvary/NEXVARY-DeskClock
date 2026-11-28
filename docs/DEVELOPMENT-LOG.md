@@ -62,6 +62,14 @@ Branch `engineering/p2-scenario-loading` starts at the fixed-step head. Commit `
 
 Local Debian 13 GCC 14.2.0 and Qt 6.5.3 passed `ctest --no-tests=error --output-on-failure` in Debug and Release, with four entries each. Model tests exercised accepted load and reset, restoration of the built-in scenario, remote rejection and eight invalid-file rows. Dashboard tests exercised navigation, display of load errors and restoration from the real QML window. The draft 2020-12 schema and the checked-in example passed Python jsonschema validation. Source hygiene passed. Native file-chooser interactions and Windows packaging are covered separately by platform review and hosted verification.
 
+The scenario-load push CI for exact head `62c83b0d7856737a88d55ab9931d446cafbeefe1` passed core GCC/Clang/MSVC, Linux and Windows desktop Debug and Release, and hosted Windows packaging. [PR #10](https://github.com/nexvary/NEXVARY-DeskClock/pull/10) · [Push CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46187644371)
+
+## 2026-11-28 — P3 radar navigation
+
+Branch `engineering/p3-radar-navigation` starts at the scenario-load head. Commit `882f642d071a9b47d3ea9395d1caaf96f3560898` adds 10–1280 km zoom, drag panning, recentering, type filtering and independent label and history overlays. PPI painting and click selection use one local projection and filter. The view reuses the latest Qt track snapshot between simulation notifications. Commit `5d2444c9ea9aa412d9baba5766cd8576a7bae317` fits controls to the minimum supported window and sets readable theme colors for their labels.
+
+Local Debian 13 GCC 14.2.0 and Qt 6.5.3 passed 4/4 CTest entries in Debug and Release. The real-window radar test exercises zoom, drag pan, panned-track selection, hidden-track rejection, toggles and recenter while paused. The source hygiene check passed. The release executable rendered the dashboard at the minimum window size.
+
 ### Resume point
 
-Continue on `engineering/p2-scenario-loading` after the hosted checks. Extend the versioned scenario model with waypoint and altitude profiles, then add an editor that shares its validation contract. Radar zoom, pan and layers can progress independently against the existing model. P1 still needs replay and research workspaces and assistive-technology, high-DPI and multi-display verification. Upstream draft integration, release license review and production release gates remain open. See [feature parity](FEATURE-PARITY.md).
+Continue on `engineering/p3-radar-navigation`. Extend scenario motion with deterministic waypoint and altitude profiles and add an editor using the same validation contract. Radar settings persistence, measurement units, geodetic projection and dense-traffic benchmarking remain open. Keep the pending upstream PR stack and repository release gates visible. The complete 188-feature inventory is in [feature parity](FEATURE-PARITY.md).

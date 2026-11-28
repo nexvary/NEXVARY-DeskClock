@@ -116,6 +116,71 @@ private slots:
         QCOMPARE(warnings.size(), 0);
     }
 
+    void radarNavigationAndFiltering() {
+        SimulatorModel simulator;
+        simulator.pause();
+        QQmlApplicationEngine engine;
+        engine.rootContext()->setContextProperty("aeroSimulatorModel", &simulator);
+        QSignalSpy warnings(&engine, &QQmlApplicationEngine::warnings);
+        engine.loadFromModule("AeroRadar", "Main");
+        QCOMPARE(engine.rootObjects().size(), 1);
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().front());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+
+        auto* ppi = findItem(window->contentItem(), QStringLiteral("radar-ppi"));
+        QVERIFY(ppi);
+        auto* canvas = findItem(ppi, QStringLiteral("radar-canvas"));
+        auto* zoom = findItem(ppi, QStringLiteral("radar-zoom-in"));
+        auto* center = findItem(ppi, QStringLiteral("radar-reset-view"));
+        auto* labels = findItem(ppi, QStringLiteral("radar-labels"));
+        auto* trails = findItem(ppi, QStringLiteral("radar-history"));
+        auto* filter = findItem(ppi, QStringLiteral("radar-track-filter"));
+        QVERIFY(canvas && zoom && center && labels && trails && filter);
+        QTRY_VERIFY(canvas->width() > 100 && canvas->height() > 100);
+        QCOMPARE(ppi->property("rangeKm").toDouble(), 40.0);
+
+        const auto click = [window](QQuickItem* item) {
+            const QPointF midpoint(item->width() / 2, item->height() / 2);
+            QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, item->mapToScene(midpoint).toPoint());
+        };
+        click(zoom);
+        QCOMPARE(ppi->property("rangeKm").toDouble(), 20.0);
+        const QPoint start = canvas->mapToScene(QPointF(canvas->width() / 2, canvas->height() / 2)).toPoint();
+        const QPoint end = start + QPoint(64, -40);
+        QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, start);
+        QTest::mouseMove(window, end);
+        QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, end);
+        QVERIFY(ppi->property("centerEastKm").toDouble() < 0.0);
+        QVERIFY(ppi->property("centerNorthKm").toDouble() < 0.0);
+
+        // Track 2 is a multirotor at (-6.5 km east, -17.5 km north).
+        const double pixelsPerKm = canvas->property("pixelsPerKm").toDouble();
+        const QPointF trackPoint(canvas->property("originX").toDouble() - 6.5 * pixelsPerKm,
+                                 canvas->property("originY").toDouble() + 17.5 * pixelsPerKm);
+        const QPoint trackScenePoint = canvas->mapToScene(trackPoint).toPoint();
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, trackScenePoint);
+        QCOMPARE(simulator.selected().value("id").toInt(), 2);
+
+        simulator.selectTrack(1);
+        filter->forceActiveFocus();
+        QTest::keyClick(window, Qt::Key_Down);
+        QCOMPARE(ppi->property("trackTypeFilter").toString(), QStringLiteral("FIXED_WING"));
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, trackScenePoint);
+        QCOMPARE(simulator.selected().value("id").toInt(), 1);
+
+        click(labels);
+        click(trails);
+        QVERIFY(!ppi->property("showLabels").toBool());
+        QVERIFY(!ppi->property("showHistory").toBool());
+        click(center);
+        QCOMPARE(ppi->property("rangeKm").toDouble(), 40.0);
+        QCOMPARE(ppi->property("centerEastKm").toDouble(), 0.0);
+        QCOMPARE(ppi->property("centerNorthKm").toDouble(), 0.0);
+        QCOMPARE(simulator.simTimeSeconds(), 0.0);
+        QCOMPARE(warnings.size(), 0);
+    }
+
     void appearancePersistsAcrossWindows() {
         SimulatorModel simulator;
         QColor dark;

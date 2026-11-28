@@ -78,19 +78,19 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 | Feature ID | Requirement | Implementation | Status | Priority | Source Files | Tests | Evidence | Remaining Gap | Next Action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | P3-01 | Plan Position Indicator | Canvas renders model tracks and synthetic sweep | Implemented | P3 | RadarPpi.qml | Rendered screenshots | Baseline CI | Full acceptance coverage | Exercise remaining stage acceptance criteria |
-| P3-02 | Range rings | Four labeled rings | Implemented | P3 | RadarPpi.qml | Rendered screenshots | Baseline CI | Full acceptance coverage | Exercise remaining stage acceptance criteria |
+| P3-02 | Range rings | Four concentric range rings labeled for the active radar scale | Implemented | P3 | RadarPpi.qml | Rendered captures and radar interaction | Baseline CI, Local P3 | Calibrated rendering assertions | Add projection screenshot fixtures |
 | P3-03 | Compass rose | Bearing spokes and numeric labels | Partial | P3 | RadarPpi.qml | — | — | Full acceptance coverage | Exercise remaining stage acceptance criteria |
-| P3-04 | Zoom and pan | — | Missing | P3 | — | — | — | Zoom and pan | Implement zoom and pan with acceptance tests |
-| P3-05 | Track labels | Tracks display IDs and measured values | Implemented | P3 | RadarPpi.qml | Rendered screenshots | Baseline CI | Full acceptance coverage | Exercise remaining stage acceptance criteria |
-| P3-06 | Track history | Bounded history per aircraft; PPI dots | Partial | P3 | RadarPpi.qml, SimulatorModel.cpp | pauseStopsSimulation | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
-| P3-07 | Track selection | Pointer-assisted selection and model selection signals | Partial | P3 | RadarPpi.qml, SimulatorModel.cpp | selectTrackEmitsSelectedChanged | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
-| P3-08 | Configurable display layers | — | Missing | P3 | — | — | — | Configurable display layers | Implement configurable display layers with acceptance tests |
-| P3-09 | Synthetic track filtering | — | Missing | P3 | — | — | — | Synthetic track filtering | Implement synthetic track filtering with acceptance tests |
+| P3-04 | Zoom and pan | Eight bounded zoom levels, wheel and buttons, drag pan, and recenter | Verified | P3 | RadarPpi.qml | radarNavigationAndFiltering | Local P3 | — | Retain projection and input regression coverage |
+| P3-05 | Track labels | Track identity and telemetry labels with an on-screen toggle | Implemented | P3 | RadarPpi.qml | radarNavigationAndFiltering | Local P3 | Captured layout with dense traffic | Add dense synthetic scenario captures |
+| P3-06 | Track history | Bounded trail history and independently toggled radar overlay | Partial | P3 | RadarPpi.qml, SimulatorModel.cpp | pauseStopsSimulation, radarNavigationAndFiltering | Local P0, Local P3 | History length preference and performance checks | Benchmark dense scenes and expose settings |
+| P3-07 | Track selection | Click uses the same projection and filter as rendering after pan and zoom | Verified | P3 | RadarPpi.qml, SimulatorModel.cpp | radarNavigationAndFiltering | Local P3 | — | Retain click hit-test coverage |
+| P3-08 | Configurable display layers | Labels and history switched independently | Partial | P3 | RadarPpi.qml | radarNavigationAndFiltering | Local P3 | Additional layers and persistent preferences | Extend the settings contract |
+| P3-09 | Synthetic track filtering | Type filter applies to Canvas painting and mouse selection | Verified | P3 | RadarPpi.qml | radarNavigationAndFiltering | Local P3 | — | Retain hidden-track selection regression |
 | P3-10 | Civil air traffic visualization | Fixed-wing and multirotor icons | Partial | P3 | RadarPpi.qml | Rendered screenshots | Baseline CI | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 | P3-11 | Configurable measurement units | — | Missing | P3 | — | — | — | Configurable measurement units | Implement configurable measurement units with acceptance tests |
 | P3-12 | Geographic coordinate visualization | — | Missing | P3 | — | — | — | Geographic coordinate visualization | Implement geographic coordinate visualization with acceptance tests |
 | P3-13 | Display preferences | — | Missing | P3 | — | — | — | Display preferences | Implement display preferences with acceptance tests |
-| P3-14 | Performance optimization | Bounded trails and linear track conversion | Partial | P3 | SimulatorModel.cpp | — | — | Full acceptance coverage | Exercise remaining stage acceptance criteria |
+| P3-14 | Performance optimization | Radar caches the model snapshot between simulation updates and skips hidden/paused animation | Partial | P3 | RadarPpi.qml, SimulatorModel.cpp | Paused timer and dashboard interaction | Local P0, Local P3 | Measured frame and update performance | Benchmark rendering with 256 tracks and bounded trails |
 | P3-15 | Synthetic source label | Dashboard and PPI labels | Implemented | P3 | Main.qml, RadarPpi.qml | Rendered screenshots | Baseline CI | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 
 ## P4

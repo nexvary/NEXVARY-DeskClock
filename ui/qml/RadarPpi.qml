@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import AeroRadar
 
@@ -13,15 +14,46 @@ Rectangle {
     radius: 4
 
     // ── Public interface ─────────────────────────────────────────────────
-    property var  simulator: null
-    property real rangeKm:   40.0
+    objectName: "radar-ppi"
+    property var simulator: null
+    readonly property var tracks: simulator ? simulator.tracks : []
+    readonly property var rangesKm: [10, 20, 40, 80, 160, 320, 640, 1280]
+    property int rangeIndex: 2
+    readonly property real rangeKm: rangesKm[rangeIndex]
+    property real centerEastKm: 0
+    property real centerNorthKm: 0
+    property bool showLabels: true
+    property bool showHistory: true
+    property string trackTypeFilter: ""
+
+    function zoomBy(delta) {
+        rangeIndex = Math.max(0, Math.min(rangesKm.length - 1, rangeIndex + delta))
+    }
+
+    function resetView() {
+        rangeIndex = 2
+        centerEastKm = 0
+        centerNorthKm = 0
+    }
+
+    function includesTrack(track) {
+        return trackTypeFilter === "" || track.type === trackTypeFilter
+    }
+
+    onRangeKmChanged: radarCanvas.requestPaint()
+    onCenterEastKmChanged: radarCanvas.requestPaint()
+    onCenterNorthKmChanged: radarCanvas.requestPaint()
+    onShowLabelsChanged: radarCanvas.requestPaint()
+    onShowHistoryChanged: radarCanvas.requestPaint()
+    onTrackTypeFilterChanged: radarCanvas.requestPaint()
+    onTracksChanged: if (visible) radarCanvas.requestPaint()
 
     // ── Panel header ─────────────────────────────────────────────────────
     RowLayout {
         id: ppiHeader
         anchors { top: parent.top; left: parent.left; right: parent.right }
         anchors { topMargin: 8; leftMargin: 12; rightMargin: 12 }
-        height: 28
+        height: 36
         spacing: 8
 
         Rectangle { width: 10; height: 10; radius: 5; color: AeroTheme.accentBlue }
@@ -31,14 +63,50 @@ Rectangle {
         }
         Item { Layout.fillWidth: true }
         Text {
-            text: "R: " + ppi.rangeKm.toFixed(0) + " km"
-            font.pixelSize: 10; color: AeroTheme.accentBlue
+            text: qsTr("Range %1 km").arg(ppi.rangeKm)
+            font.pixelSize: 12
+            color: AeroTheme.accentBlue
+        }
+        Button {
+            objectName: "radar-zoom-in"
+            Layout.preferredWidth: 42
+            Layout.preferredHeight: 30
+            text: "+"
+            Accessible.name: qsTr("Zoom in")
+            enabled: ppi.rangeIndex > 0
+            onClicked: ppi.zoomBy(-1)
+        }
+        Button {
+            objectName: "radar-zoom-out"
+            Layout.preferredWidth: 42
+            Layout.preferredHeight: 30
+            text: "−"
+            Accessible.name: qsTr("Zoom out")
+            enabled: ppi.rangeIndex < ppi.rangesKm.length - 1
+            onClicked: ppi.zoomBy(1)
+        }
+        Button {
+            objectName: "radar-reset-view"
+            Layout.preferredWidth: 74
+            Layout.preferredHeight: 30
+            text: qsTr("Center")
+            Accessible.description: qsTr("Restore the original center and range")
+            onClicked: ppi.resetView()
         }
     }
 
     // ── Radar canvas ─────────────────────────────────────────────────────
     Canvas {
         id: radarCanvas
+        objectName: "radar-canvas"
+        readonly property real scopeRadius: Math.min(width, height) * 0.44
+        readonly property real pixelsPerKm: scopeRadius / ppi.rangeKm
+        readonly property real originX: width * 0.5 - ppi.centerEastKm * pixelsPerKm
+        readonly property real originY: height * 0.5 + ppi.centerNorthKm * pixelsPerKm
+
+        function project(eastKm, northKm) {
+            return Qt.point(originX + eastKm * pixelsPerKm, originY - northKm * pixelsPerKm)
+        }
         anchors {
             top: ppiHeader.bottom; bottom: ppiLegend.top
             left: parent.left; right: parent.right
@@ -63,20 +131,12 @@ Rectangle {
             }
         }
 
-        Connections {
-            target: ppi.simulator
-            function onSimStateChanged() {
-                if (radarCanvas.visible)
-                    radarCanvas.requestPaint()
-            }
-        }
-
         onPaint: {
             var ctx = getContext("2d");
             var W = width, H = height;
             if (W < 10 || H < 10) return;
-            var cx = W * 0.5, cy = H * 0.5;
-            var R  = Math.min(W, H) * 0.44;
+            var cx = originX, cy = originY;
+            var R = scopeRadius;
             ctx.clearRect(0, 0, W, H);
             ctx.fillStyle = AeroTheme.scopeBackground;
             ctx.fillRect(0, 0, W, H);
@@ -138,24 +198,25 @@ Rectangle {
 
             // Track icons
             if (!ppi.simulator) return;
-            var tracks = ppi.simulator.tracks;
+            var tracks = ppi.tracks;
             if (!tracks || tracks.length === 0) return;
-            var t, px, py, bc, trail, j, a, tpx, tpy, lx, ly, ti;
+            var t, px, py, bc, trail, j, a, lx, ly, ti;
             for (ti = 0; ti < tracks.length; ti++) {
                 t  = tracks[ti];
+                if (!ppi.includesTrack(t)) continue;
                 bc = (t.type === "UAS") ? AeroTheme.accentGreen : AeroTheme.accentBlue;
-                px = cx + (t.x_km / ppi.rangeKm) * R;
-                py = cy - (t.y_km / ppi.rangeKm) * R;
+                const position = project(t.x_km, t.y_km);
+                px = position.x;
+                py = position.y;
 
                 // Trail dots
                 trail = t.trail;
-                if (trail && trail.length > 1) {
+                if (ppi.showHistory && trail && trail.length > 1) {
                     for (j = 1; j < trail.length; j++) {
                         a   = j / trail.length;
-                        tpx = cx + (trail[j].x_km / ppi.rangeKm) * R;
-                        tpy = cy - (trail[j].y_km / ppi.rangeKm) * R;
+                        const trailPoint = project(trail[j].x_km, trail[j].y_km);
                         ctx.beginPath();
-                        ctx.arc(tpx, tpy, 2, 0, 2 * Math.PI);
+                        ctx.arc(trailPoint.x, trailPoint.y, 2, 0, 2 * Math.PI);
                         ctx.fillStyle = Qt.alpha(AeroTheme.trailColor, a * 0.65);
                         ctx.fill();
                     }
@@ -193,6 +254,8 @@ Rectangle {
                 ctx.stroke();
                 ctx.setLineDash([]);
 
+                if (!ppi.showLabels) continue;
+
                 // Selection data box
                 if (t.selected) {
                     ctx.fillStyle   = Qt.alpha(AeroTheme.bgCard, 0.92);
@@ -215,26 +278,63 @@ Rectangle {
             }
         }
 
-        // Click-to-select track
         MouseArea {
             anchors.fill: parent
-            onClicked: function(mouse) {
-                if (!ppi.simulator) return;
-                var W  = radarCanvas.width, H = radarCanvas.height;
-                var cx = W * 0.5, cy = H * 0.5;
-                var R  = Math.min(W, H) * 0.44;
-                var tracks = ppi.simulator.tracks;
-                if (!tracks) return;
-                var best = -1, bestD = 18;
-                for (var ti = 0; ti < tracks.length; ti++) {
-                    var t  = tracks[ti];
-                    var px = cx + (t.x_km / ppi.rangeKm) * R;
-                    var py = cy - (t.y_km / ppi.rangeKm) * R;
-                    var d  = Math.sqrt((mouse.x - px) * (mouse.x - px) +
-                                       (mouse.y - py) * (mouse.y - py));
-                    if (d < bestD) { bestD = d; best = t.id; }
+            cursorShape: dragDetected ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+            property bool dragDetected: false
+            property real startX
+            property real startY
+            property real startEast
+            property real startNorth
+
+            onPressed: function(mouse) {
+                dragDetected = false
+                startX = mouse.x
+                startY = mouse.y
+                startEast = ppi.centerEastKm
+                startNorth = ppi.centerNorthKm
+            }
+
+            onPositionChanged: function(mouse) {
+                if (!pressed || radarCanvas.pixelsPerKm <= 0)
+                    return
+                const offsetX = mouse.x - startX
+                const offsetY = mouse.y - startY
+                if (!dragDetected && Math.hypot(offsetX, offsetY) < 6)
+                    return
+                dragDetected = true
+                const scale = radarCanvas.pixelsPerKm
+                ppi.centerEastKm = Math.max(-1280, Math.min(1280, startEast - offsetX / scale))
+                ppi.centerNorthKm = Math.max(-1280, Math.min(1280, startNorth + offsetY / scale))
+            }
+
+            onReleased: function(mouse) {
+                const moved = dragDetected
+                dragDetected = false
+                if (moved || !containsMouse || !ppi.simulator)
+                    return
+                const tracks = ppi.tracks
+                let nearestId = null
+                let nearestPx = 18
+                for (const track of tracks) {
+                    if (!ppi.includesTrack(track))
+                        continue
+                    const point = radarCanvas.project(track.x_km, track.y_km)
+                    const distance = Math.hypot(mouse.x - point.x, mouse.y - point.y)
+                    if (distance < nearestPx) {
+                        nearestPx = distance
+                        nearestId = track.id
+                    }
                 }
-                if (best >= 0) ppi.simulator.selectTrack(best);
+                if (nearestId !== null)
+                    ppi.simulator.selectTrack(nearestId)
+            }
+
+            onCanceled: dragDetected = false
+
+            onWheel: function(wheel) {
+                if (wheel.angleDelta.y !== 0)
+                    ppi.zoomBy(wheel.angleDelta.y > 0 ? -1 : 1)
             }
         }
     }
@@ -244,12 +344,37 @@ Rectangle {
         id: ppiLegend
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors { bottomMargin: 6; leftMargin: 12 }
-        height: 20
-        spacing: 16
+        height: 40
+        spacing: 10
+
+        CheckBox {
+            objectName: "radar-labels"
+            text: qsTr("Labels")
+            checked: ppi.showLabels
+            onToggled: ppi.showLabels = checked
+        }
+        CheckBox {
+            objectName: "radar-history"
+            text: qsTr("History")
+            checked: ppi.showHistory
+            onToggled: ppi.showHistory = checked
+        }
+        ComboBox {
+            objectName: "radar-track-filter"
+            model: [
+                {label: qsTr("All tracks"), type: ""},
+                {label: qsTr("Fixed-wing"), type: "FIXED_WING"},
+                {label: qsTr("Multirotor"), type: "UAS"}
+            ]
+            textRole: "label"
+            valueRole: "type"
+            currentIndex: model.findIndex(entry => entry.type === ppi.trackTypeFilter)
+            Accessible.name: qsTr("Radar track type filter")
+            onActivated: function(index) { ppi.trackTypeFilter = model[index].type }
+        }
 
         Text { text: "UAS (Multirotor)";      color: AeroTheme.accentGreen; font.pixelSize: 9 }
         Text { text: "Aircraft (Fixed-Wing)"; color: AeroTheme.accentBlue; font.pixelSize: 9 }
-        Text { text: "Track History";         color: AeroTheme.trailColor; font.pixelSize: 9 }
         Item { Layout.fillWidth: true }
         Text { text: "DATA: SYNTHETIC"; color: AeroTheme.accentAmber; font.pixelSize: 9 }
     }
