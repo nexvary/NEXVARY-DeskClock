@@ -300,6 +300,52 @@ AERO_TEST(manual_step_rejects_invalid_duration) {
     AERO_REQUIRE(sim.is_paused());
 }
 
+AERO_TEST(waypoints_interpolate_time_position_and_altitude) {
+    using namespace aeroradar;
+    Simulator sim({
+        {1, 0.0, 0.0, 0.0, 0.0, 1000.0},
+        {2, 0.0, 2.0, 0.2, 0.0, 500.0}
+    }, {
+        {1, {{10.0, 2.0, 0.0, 2000.0}, {20.0, 2.0, 1.0, 3000.0}}}
+    });
+    AERO_REQUIRE(sim.has_routes());
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].vx_km_s, 0.2, 1e-12);
+    sim.step(5.0);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].x_km, 1.0, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].altitude_m, 1500.0, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[1].x_km, 1.0, 1e-12);
+    sim.step(5.0);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].x_km, 2.0, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].vy_km_s, 0.1, 1e-12);
+    sim.step(5.0);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].y_km, 0.5, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].altitude_m, 2500.0, 1e-12);
+    sim.step(8.0);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].y_km, 1.0, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].altitude_m, 3000.0, 1e-12);
+    AERO_REQUIRE_NEAR(speed_mps(sim.aircraft()[0]), 0.0, 1e-12);
+    sim.reset();
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].x_km, 0.0, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].altitude_m, 1000.0, 1e-12);
+    AERO_REQUIRE_NEAR(sim.aircraft()[0].vx_km_s, 0.2, 1e-12);
+}
+
+AERO_TEST(invalid_routes_are_rejected) {
+    using namespace aeroradar;
+    const std::vector<Aircraft> aircraft{{1, 0.0, 0.0, 0.0, 0.0, 100.0}};
+    const AircraftRoute valid{1, {{1.0, 1.0, 0.0, 200.0}}};
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator(aircraft, {{2, valid.waypoints}}));
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator(aircraft, {valid, valid}));
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator(aircraft, {{1, {}}}));
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator(aircraft, {
+        {1, {{2.0, 1.0, 0.0, 200.0}, {1.0, 1.0, 0.0, 100.0}}}
+    }));
+    const double max = std::numeric_limits<double>::max();
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator(aircraft, {
+        {1, {{0.1, max, 0.0, 200.0}}}
+    }));
+}
+
 int main() {
     // Test cases run before main and emit their own result.
     return 0;

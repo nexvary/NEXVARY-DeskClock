@@ -1,0 +1,22 @@
+{
+  "format": "nexvary.aeroradar.scenario",
+  "version": 2,
+  "source": "synthetic",
+  "name": "Climb and turn example",
+  "aircraft": [
+    {
+      "id": 31,
+      "label": "CLIMB-31",
+      "type": "fixed-wing",
+      "x_km": 0,
+      "y_km": 0,
+      "vx_km_s": 0,
+      "vy_km_s": 0,
+      "altitude_m": 1000,
+      "waypoints": [
+        {"time_s": 10, "x_km": 2, "y_km": 0, "altitude_m": 2000},
+        {"time_s": 20, "x_km": 2, "y_km": 1, "altitude_m": 3000}
+      ]
+    }
+  ]
+}

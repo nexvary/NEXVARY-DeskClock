@@ -123,7 +123,7 @@ ApplicationWindow {
                     qsTr("%1 with %2 synthetic tracks.")
                         .arg(root.simulator.scenarioName).arg(root.simulator.trackCount),
                     root.simulator.paused ? qsTr("Simulation paused.") : qsTr("Simulation running."),
-                    qsTr("The scenario uses a local planar coordinate frame and constant velocity.")
+                    root.simulator.flightModel
                 ]
             }
 

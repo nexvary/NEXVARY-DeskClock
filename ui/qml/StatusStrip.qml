@@ -104,7 +104,7 @@ Rectangle {
                     {lbl:"TRACKS",         val: strip.simulator ? String(strip.simulator.trackCount) : "--",        unit:"(Simulated)"},
                     {lbl:"UTC WALL CLOCK", val: strip.utcWallClock,                                                   unit:""},
                     {lbl:"ELAPSED",        val: strip.simulator ? strip.simulator.simTimeDisplay : "00:00:00",        unit:""},
-                    {lbl:"FLIGHT MODEL",   val: "Planar, constant velocity",                                           unit:""},
+                    {lbl:"FLIGHT MODEL",   val: strip.simulator ? strip.simulator.flightModel : "",                                           unit:""},
                 ]
                 delegate: RowLayout {
                     spacing: 0

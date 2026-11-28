@@ -70,6 +70,16 @@ Branch `engineering/p3-radar-navigation` starts at the scenario-load head. Commi
 
 Local Debian 13 GCC 14.2.0 and Qt 6.5.3 passed 4/4 CTest entries in Debug and Release. The real-window radar test exercises zoom, drag pan, panned-track selection, hidden-track rejection, toggles and recenter while paused. The source hygiene check passed. The release executable rendered the dashboard at the minimum window size.
 
+## 2026-11-28 — P2 waypoint and altitude profiles
+
+Branch `engineering/p2-waypoint-profiles` starts at the P3 head. Commit `634a930acc3c4aa36ad95710c0766bc377131090` adds timed local waypoint interpolation and route-based altitude. The simulation validates routes at construction, computes deltas and next state before committing a tick, and restores position, velocity and altitude on reset. Version 2 adds optional waypoints while retaining the v1 file behavior. The app labels the active flight model.
+
+Debian 13 with GCC 14.2.0 and Qt 6.5.3 passed 4/4 CTest entries in Debug and Release. Coverage includes interpolation midway through each leg, direction change at a waypoint, terminal hold, restoration of altitude and velocity, invalid times and route speed, and loading both schema versions. All 32 core tests passed with AddressSanitizer and UndefinedBehaviorSanitizer. Local LeakSanitizer remained unavailable. Both schemas and both examples passed Python jsonschema validation. Source hygiene passed.
+
+### Dependency review
+
+The published Qt Quick 3D terms are commercial or GPLv3. The repository currently reserves all rights, so product adoption remains blocked pending an approved compatible licensing route. JSBSim remains an evaluation candidate based on active native C++ upstream maintenance, and BlueSky remains reference-only. No new bundled dependency was introduced. [Adoption matrix](THIRD_PARTY_ADOPTION_MATRIX.md)
+
 ### Resume point
 
-Continue on `engineering/p3-radar-navigation`. Extend scenario motion with deterministic waypoint and altitude profiles and add an editor using the same validation contract. Radar settings persistence, measurement units, geodetic projection and dense-traffic benchmarking remain open. Keep the pending upstream PR stack and repository release gates visible. The complete 188-feature inventory is in [feature parity](FEATURE-PARITY.md).
+Continue on `engineering/p2-waypoint-profiles` after its hosted checks. The scenario editor and atomic save/export are the next dependencies for replay and research. Use the v1/v2 contracts and keep validation shared. Seeded aircraft, weather and validated civil performance models remain open. P3 still needs persisted display preferences, measurement units, geodetic projection and dense-scenario benchmarks. P4–P11 work and release gates are tracked in the 188-item [feature parity matrix](FEATURE-PARITY.md) and [release checklist](RELEASE-CHECKLIST.md).
