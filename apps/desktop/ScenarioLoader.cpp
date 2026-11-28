@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSaveFile>
 #include <QUrl>
 #include <algorithm>
 #include <cmath>
@@ -117,30 +118,24 @@ std::optional<aeroradar::AircraftRoute> parseRoute(const QJsonValue& input,
     return route;
 }
 
-} // namespace
+QString message(const char* reason) {
+    return QCoreApplication::translate("ScenarioLoader", reason);
+}
 
-std::optional<LoadedScenario> loadScenarioFile(const QUrl& fileUrl, QString& error) {
+QString localPath(const QUrl& fileUrl) {
+    if (!fileUrl.isLocalFile() || !fileUrl.host().isEmpty())
+        return {};
+    const auto path = QDir::fromNativeSeparators(fileUrl.toLocalFile());
+    if (path.startsWith(QLatin1String("//")) || !QDir::isAbsolutePath(path))
+        return {};
+    return path;
+}
+
+std::optional<LoadedScenario> parseScenario(const QByteArray& contents, QString& error) {
     const auto fail = [&error](const char* reason) -> std::optional<LoadedScenario> {
-        error = QCoreApplication::translate("ScenarioLoader", reason);
+        error = message(reason);
         return std::nullopt;
     };
-    if (!fileUrl.isLocalFile() || !fileUrl.host().isEmpty())
-        return fail("Choose a local scenario file.");
-
-    const QString path = QDir::fromNativeSeparators(fileUrl.toLocalFile());
-    const QFileInfo info(path);
-    if (path.startsWith(QLatin1String("//")) || !info.isAbsolute() || !info.isFile())
-        return fail("The scenario must be a regular local file.");
-
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
-        return fail("The scenario file could not be opened.");
-    if (file.size() > maxScenarioBytes)
-        return fail("The scenario file exceeds 256 KiB.");
-
-    const auto contents = file.read(maxScenarioBytes + 1);
-    if (file.error() != QFileDevice::NoError)
-        return fail("The scenario file could not be read.");
     if (contents.size() > maxScenarioBytes)
         return fail("The scenario file exceeds 256 KiB.");
 
@@ -179,10 +174,82 @@ std::optional<LoadedScenario> loadScenarioFile(const QUrl& fileUrl, QString& err
     }
 
     try {
-        LoadedScenario loaded{name, aeroradar::Simulator(std::move(aircraft), std::move(routes))};
+        LoadedScenario loaded{name, QString::fromUtf8(contents), aeroradar::Simulator(std::move(aircraft), std::move(routes))};
         error.clear();
         return loaded;
     } catch (const std::invalid_argument&) {
         return fail("Scenario aircraft must have unique IDs and valid state and routes.");
     }
+}
+
+} // namespace
+
+std::optional<LoadedScenario> loadScenarioFile(const QUrl& fileUrl, QString& error) {
+    const auto fail = [&error](const char* reason) -> std::optional<LoadedScenario> {
+        error = message(reason);
+        return std::nullopt;
+    };
+    const QString path = localPath(fileUrl);
+    if (path.isEmpty() || !QFileInfo(path).isFile())
+        return fail("The scenario must be a regular local file.");
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return fail("The scenario file could not be opened.");
+    if (file.size() > maxScenarioBytes)
+        return fail("The scenario file exceeds 256 KiB.");
+
+    const auto contents = file.read(maxScenarioBytes + 1);
+    if (file.error() != QFileDevice::NoError)
+        return fail("The scenario file could not be read.");
+    return parseScenario(contents, error);
+}
+
+std::optional<LoadedScenario> parseScenarioText(const QString& text, QString& error) {
+    if (text.size() > maxScenarioBytes) {
+        error = message("The scenario file exceeds 256 KiB.");
+        return std::nullopt;
+    }
+    return parseScenario(text.toUtf8(), error);
+}
+
+bool saveScenarioFile(const QUrl& fileUrl, const QString& text, QString& error) {
+    if (!parseScenarioText(text, error))
+        return false;
+
+    const QString path = localPath(fileUrl);
+    const QFileInfo destination(path);
+    if (path.isEmpty() || destination.isSymLink() ||
+        (destination.exists() && !destination.isFile())) {
+        error = message("Choose a regular local file for saving.");
+        return false;
+    }
+
+    const auto bytes = text.toUtf8();
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) {
+        error = message("The scenario could not be saved.");
+        return false;
+    }
+    error.clear();
+    return true;
+}
+
+QString describeBuiltinScenario(const QString& name, const aeroradar::Simulator& simulator) {
+    QJsonArray records;
+    for (const auto& aircraft : simulator.aircraft()) {
+        const QString type = aircraft.type == aeroradar::AircraftType::FIXED_WING
+            ? QStringLiteral("fixed-wing") : QStringLiteral("multirotor");
+        records.append(QJsonObject{
+            {"id", aircraft.id}, {"label", QString::fromStdString(aircraft.label)}, {"type", type},
+            {"x_km", aircraft.x_km}, {"y_km", aircraft.y_km},
+            {"vx_km_s", aircraft.vx_km_s}, {"vy_km_s", aircraft.vy_km_s},
+            {"altitude_m", aircraft.altitude_m}
+        });
+    }
+    const QJsonObject document{
+        {"format", "nexvary.aeroradar.scenario"}, {"version", 1}, {"source", "synthetic"},
+        {"name", name}, {"aircraft", records}
+    };
+    return QString::fromUtf8(QJsonDocument(document).toJson(QJsonDocument::Indented));
 }

@@ -110,6 +110,16 @@ private slots:
         QVERIFY(error->isVisible());
         click(builtin);
         QVERIFY(!error->isVisible());
+        auto* editor = findItem(window->contentItem(), QStringLiteral("scenario-editor"));
+        auto* apply = findItem(window->contentItem(), QStringLiteral("scenario-apply"));
+        QVERIFY(editor && apply);
+        auto draft = editor->property("text").toString();
+        QVERIFY(!draft.isEmpty());
+        draft.replace(simulator.scenarioName(), QStringLiteral("Dashboard draft"));
+        QVERIFY(editor->setProperty("text", draft));
+        click(apply);
+        QCOMPARE(simulator.scenarioName(), QStringLiteral("Dashboard draft"));
+        QVERIFY(!error->isVisible());
         QCOMPARE(simulator.simTimeSeconds(), 0.0);
         QVERIFY(simulator.isPaused());
 
