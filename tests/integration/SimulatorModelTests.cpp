@@ -239,6 +239,54 @@ private slots:
         QCOMPARE(model_->selected().value("altitude_m").toDouble(), 1000.0);
     }
 
+    void editsAndSavesValidatedDraftWithoutReplacingActiveState() {
+        auto draft = model_->scenarioText();
+        QVERIFY(!draft.isEmpty());
+        const QString originalName = model_->scenarioName();
+        draft.replace(originalName, QStringLiteral("Edited synthetic scenario"));
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto url = writeScenario(directory, QByteArray("existing file"));
+        QVERIFY(url.isLocalFile());
+        model_->pause();
+        model_->stepOnce();
+        QVERIFY(!model_->saveScenarioText(url, QStringLiteral("{bad")));
+        {
+            QFile destination(url.toLocalFile());
+            QVERIFY(destination.open(QIODevice::ReadOnly));
+            QCOMPARE(destination.readAll(), QByteArray("existing file"));
+        }
+
+        QVERIFY(model_->saveScenarioText(url, draft));
+        QCOMPARE(model_->scenarioName(), originalName);
+        QCOMPARE(model_->simTimeSeconds(), 0.1);
+        QVERIFY(model_->scenarioError().isEmpty());
+        {
+            QFile destination(url.toLocalFile());
+            QVERIFY(destination.open(QIODevice::ReadOnly));
+            QCOMPARE(destination.readAll(), draft.toUtf8());
+        }
+
+        QVERIFY(!model_->applyScenarioText(QStringLiteral("invalid")));
+        QCOMPARE(model_->simTimeSeconds(), 0.1);
+        QCOMPARE(model_->scenarioName(), originalName);
+        QVERIFY(model_->applyScenarioText(draft));
+        QCOMPARE(model_->scenarioName(), QStringLiteral("Edited synthetic scenario"));
+        QCOMPARE(model_->simTimeSeconds(), 0.0);
+        QVERIFY(model_->isPaused());
+        QVERIFY(model_->loadScenario(url));
+        QCOMPARE(model_->scenarioText(), draft);
+
+        const auto routedDraft = QString::fromUtf8(scenarioFixture("civil-waypoints.json"));
+        QVERIFY(!routedDraft.isEmpty());
+        QVERIFY(!model_->saveScenarioText(QUrl::fromLocalFile(directory.path()), routedDraft));
+        QVERIFY(model_->saveScenarioText(url, routedDraft));
+        QVERIFY(model_->loadScenario(url));
+        QCOMPARE(model_->scenarioText(), routedDraft);
+        QVERIFY(model_->flightModel().contains(QStringLiteral("waypoints")));
+    }
+
     void rejectsInvalidScenario_data() {
         QTest::addColumn<QByteArray>("contents");
         QTest::newRow("bad-json") << QByteArray("{]");

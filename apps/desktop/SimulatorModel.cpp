@@ -16,6 +16,7 @@ SimulatorModel::SimulatorModel(QObject* parent)
     , sim_(aeroradar::make_builtin_scenario())
     , timer_(new QTimer(this))
     , scenarioName_(tr("Built-in synthetic scenario"))
+    , scenarioText_(describeBuiltinScenario(scenarioName_, sim_))
 {
     trails_.resize(sim_.aircraft().size());
     connect(timer_, &QTimer::timeout, this, &SimulatorModel::onTick);
@@ -137,6 +138,8 @@ QString SimulatorModel::scenarioName() const { return scenarioName_; }
 
 QString SimulatorModel::scenarioError() const { return scenarioError_; }
 
+QString SimulatorModel::scenarioText() const { return scenarioText_; }
+
 QString SimulatorModel::flightModel() const {
     return sim_.has_routes() ? tr("Local planar motion with timed waypoints")
                              : tr("Local planar, constant velocity");
@@ -156,15 +159,36 @@ bool SimulatorModel::loadScenario(const QUrl& fileUrl) {
         setScenarioError(std::move(error));
         return false;
     }
-    replaceScenario(std::move(loaded->name), std::move(loaded->simulation));
+    replaceScenario(std::move(loaded->name), std::move(loaded->document), std::move(loaded->simulation));
     return true;
 }
 
-void SimulatorModel::loadBuiltinScenario() {
-    replaceScenario(tr("Built-in synthetic scenario"), aeroradar::make_builtin_scenario());
+bool SimulatorModel::applyScenarioText(const QString& text) {
+    QString error;
+    auto loaded = parseScenarioText(text, error);
+    if (!loaded) {
+        setScenarioError(std::move(error));
+        return false;
+    }
+    replaceScenario(std::move(loaded->name), std::move(loaded->document), std::move(loaded->simulation));
+    return true;
 }
 
-void SimulatorModel::replaceScenario(QString name, aeroradar::Simulator simulator) {
+bool SimulatorModel::saveScenarioText(const QUrl& fileUrl, const QString& text) {
+    QString error;
+    const bool saved = saveScenarioFile(fileUrl, text, error);
+    setScenarioError(std::move(error));
+    return saved;
+}
+
+void SimulatorModel::loadBuiltinScenario() {
+    auto simulator = aeroradar::make_builtin_scenario();
+    auto name = tr("Built-in synthetic scenario");
+    auto document = describeBuiltinScenario(name, simulator);
+    replaceScenario(std::move(name), std::move(document), std::move(simulator));
+}
+
+void SimulatorModel::replaceScenario(QString name, QString document, aeroradar::Simulator simulator) {
     decltype(trails_) trails(simulator.aircraft().size());
     simulator.pause();
     timer_->stop();
@@ -172,6 +196,7 @@ void SimulatorModel::replaceScenario(QString name, aeroradar::Simulator simulato
     trails_ = std::move(trails);
     selectedIndex_ = 0;
     scenarioName_ = std::move(name);
+    scenarioText_ = std::move(document);
     setScenarioError({});
     emit scenarioChanged();
     emit simStateChanged();
