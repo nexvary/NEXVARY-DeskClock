@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import AeroRadar
 
@@ -52,30 +53,45 @@ Rectangle {
                     {lbl:"PAUSE", sub:"Freeze simulation",  col:"#f0b040"},
                     {lbl:"RESET", sub:"Restore to T=0",     col:"#5a7890"}
                 ]
-                delegate: Rectangle {
-                    Layout.fillWidth: true; height: 44; radius: 3
-                    color: bigMa.containsMouse ? Qt.lighter(modelData.col, 1.4) : "#0d1e30"
-                    border.color: modelData.col; border.width: 1
-                    ColumnLayout {
-                        anchors.centerIn: parent; spacing: 2
-                        Text {
-                            text: modelData.lbl; font.pixelSize: 11; font.bold: true
-                            color: bigMa.containsMouse ? "#000" : modelData.col
-                            font.family: AeroTheme.monoFont; Layout.alignment: Qt.AlignHCenter
-                        }
-                        Text {
-                            text: modelData.sub; font.pixelSize: 8
-                            color: bigMa.containsMouse ? "#333" : AeroTheme.textDim
-                            font.family: AeroTheme.monoFont; Layout.alignment: Qt.AlignHCenter
-                        }
+                delegate: Button {
+                    id: playback
+                    required property var modelData
+                    objectName: "simulation-" + modelData.lbl.toLowerCase()
+                    Layout.fillWidth: true
+                    implicitHeight: 44
+                    text: modelData.lbl
+                    enabled: ctrlPanel.simulator !== null
+                    Accessible.description: modelData.sub
+                    onClicked: {
+                        if (modelData.lbl === "PLAY")
+                            ctrlPanel.simulator.play()
+                        else if (modelData.lbl === "PAUSE")
+                            ctrlPanel.simulator.pause()
+                        else
+                            ctrlPanel.simulator.reset()
                     }
-                    MouseArea {
-                        id: bigMa; anchors.fill: parent; hoverEnabled: true
-                        onClicked: {
-                            if (!ctrlPanel.simulator) return;
-                            if      (modelData.lbl === "PLAY")  ctrlPanel.simulator.play();
-                            else if (modelData.lbl === "PAUSE") ctrlPanel.simulator.pause();
-                            else                                 ctrlPanel.simulator.reset();
+
+                    background: Rectangle {
+                        radius: 3
+                        color: playback.hovered ? "#14334f" : "#0d1e30"
+                        border.color: playback.activeFocus ? AeroTheme.textPrime : playback.modelData.col
+                        border.width: playback.activeFocus ? 2 : 1
+                    }
+                    contentItem: ColumnLayout {
+                        spacing: 2
+                        Text {
+                            text: playback.text
+                            font.pixelSize: 11
+                            font.bold: true
+                            color: playback.modelData.col
+                            font.family: AeroTheme.monoFont
+                            Layout.alignment: Qt.AlignHCenter
+                        }
+                        Text {
+                            text: playback.modelData.sub
+                            font.pixelSize: 10
+                            color: AeroTheme.textDim
+                            Layout.alignment: Qt.AlignHCenter
                         }
                     }
                 }
@@ -90,45 +106,9 @@ Rectangle {
             color: AeroTheme.textLabel; font.family: AeroTheme.monoFont
         }
 
-        // Track list
-        ColumnLayout {
-            Layout.fillWidth: true; spacing: 2
-            Repeater {
-                model: ctrlPanel.simulator ? ctrlPanel.simulator.tracks : []
-                delegate: Rectangle {
-                    Layout.fillWidth: true; height: 38; radius: 2
-                    color: modelData.selected ? "#0a2038" : "transparent"
-                    border.color: modelData.selected ? AeroTheme.accentBlue : AeroTheme.borderDim
-                    border.width: 1
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8; anchors.rightMargin: 6; spacing: 6
-                        Rectangle {
-                            width: 7; height: 7; radius: 1
-                            color: modelData.type === "UAS" ? AeroTheme.accentGreen : AeroTheme.accentBlue
-                        }
-                        ColumnLayout {
-                            spacing: 1
-                            Text {
-                                text: modelData.label
-                                font.pixelSize: 10; font.bold: true
-                                color: AeroTheme.textPrime; font.family: AeroTheme.monoFont
-                            }
-                            Text {
-                                text: modelData.type + "  " +
-                                      modelData.speed_kt.toFixed(0) + "kt  " +
-                                      modelData.altitude_m.toFixed(0) + "m"
-                                font.pixelSize: 8; color: AeroTheme.textDim
-                                font.family: AeroTheme.monoFont
-                            }
-                        }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: ctrlPanel.simulator.selectTrack(modelData.id)
-                    }
-                }
-            }
+        TrackList {
+            Layout.fillWidth: true
+            simulator: ctrlPanel.simulator
         }
 
         Item { Layout.fillHeight: true }

@@ -50,13 +50,17 @@ Rectangle {
         NumberAnimation on sweepAngle {
             from: 0; to: 360; duration: 4000
             loops: Animation.Infinite
-            running: ppi.simulator ? !ppi.simulator.paused : false
+            running: ppi.visible && ppi.simulator && !ppi.simulator.paused
         }
         onSweepAngleChanged: requestPaint()
+        onVisibleChanged: if (visible) requestPaint()
 
         Connections {
             target: ppi.simulator
-            function onSimStateChanged() { radarCanvas.requestPaint() }
+            function onSimStateChanged() {
+                if (radarCanvas.visible)
+                    radarCanvas.requestPaint()
+            }
         }
 
         onPaint: {

@@ -19,8 +19,8 @@ QtObject {
     // ── Text hierarchy ───────────────────────────────────────────────────
     readonly property color silver:    "#C0C0C0"   // Metallic Silver (brand)
     readonly property color textPrime: "#C0C0C0"
-    readonly property color textDim:   "#5a7890"
-    readonly property color textLabel: "#3a6080"
+    readonly property color textDim:   "#8ca5ba"
+    readonly property color textLabel: "#8eacce"
 
     // ── Typography ───────────────────────────────────────────────────────
     readonly property string monoFont: Qt.platform.os === "windows" ? "Consolas" : "Monospace"
