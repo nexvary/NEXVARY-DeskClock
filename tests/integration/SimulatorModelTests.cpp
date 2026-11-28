@@ -3,10 +3,25 @@
 // Requires Qt6::Test. Built only when AERORADAR_BUILD_DESKTOP=ON AND BUILD_TESTING=ON.
 #include "SimulatorModel.hpp"
 #include <QCoreApplication>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QTemporaryDir>
+#include <QUrl>
 #include <QSignalSpy>
 #include <QString>
 #include <QtTest/QtTest>
 #include <limits>
+
+namespace {
+QByteArray sampleScenario() {
+    QFile fixture(QStringLiteral(":/scenarios/docs/scenarios/civil-training.json"));
+    if (!fixture.open(QIODevice::ReadOnly))
+        return {};
+    return fixture.readAll();
+}
+}
 
 class SimulatorModelTests : public QObject {
     Q_OBJECT
@@ -186,7 +201,98 @@ private slots:
         QVERIFY(model_->isPaused());
     }
 
+    void loadsScenarioAndResetsItsOwnInitialState() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto url = writeScenario(directory, sampleScenario());
+        QVERIFY(url.isLocalFile());
+        QVERIFY(model_->loadScenario(url));
+        QVERIFY(model_->scenarioError().isEmpty());
+        QCOMPARE(model_->scenarioName(), QStringLiteral("Two civil aircraft"));
+        QCOMPARE(model_->trackCount(), 2);
+        QVERIFY(model_->isPaused());
+        QCOMPARE(model_->simTimeSeconds(), 0.0);
+        QCOMPARE(model_->selected().value("id").toInt(), 21);
+        QCOMPARE(model_->selected().value("x_km").toDouble(), 2.0);
+        model_->stepOnce();
+        QVERIFY(model_->selected().value("x_km").toDouble() > 2.0);
+        model_->reset();
+        QCOMPARE(model_->selected().value("x_km").toDouble(), 2.0);
+
+        model_->loadBuiltinScenario();
+        QCOMPARE(model_->trackCount(), 3);
+        QCOMPARE(model_->selected().value("id").toInt(), 1);
+        QVERIFY(model_->isPaused());
+    }
+
+    void rejectsInvalidScenario_data() {
+        QTest::addColumn<QByteArray>("contents");
+        QTest::newRow("bad-json") << QByteArray("{]");
+        QTest::newRow("oversized") << QByteArray(256 * 1024 + 1, ' ');
+        const auto sample = sampleScenario();
+        QVERIFY(!sample.isEmpty());
+        auto rejectedVersion = sample;
+        rejectedVersion.replace(R"("version": 1)", R"("version": 2)");
+        QTest::newRow("future-version") << rejectedVersion;
+        auto duplicate = sample;
+        duplicate.replace(R"("id": 22)", R"("id": 21)");
+        QTest::newRow("duplicate-id") << duplicate;
+        auto speed = sample;
+        speed.replace(R"("vx_km_s": 0.12)", R"("vx_km_s": 3)");
+        QTest::newRow("out-of-range-speed") << speed;
+        auto altitude = sample;
+        altitude.replace(R"("altitude_m": 800)", R"("altitude_m": null)");
+        QTest::newRow("wrong-field-type") << altitude;
+        auto source = sample;
+        source.replace(R"("source": "synthetic")", R"("source": "recorded")");
+        QTest::newRow("wrong-source") << source;
+        auto tooManyTracks = QJsonDocument::fromJson(sample).object();
+        const auto first = tooManyTracks.value("aircraft").toArray().first().toObject();
+        QJsonArray aircraft;
+        for (int id = 1; id <= 257; ++id) {
+            auto record = first;
+            record.insert("id", id);
+            aircraft.append(record);
+        }
+        tooManyTracks.insert("aircraft", aircraft);
+        QTest::newRow("record-limit") << QJsonDocument(tooManyTracks).toJson(QJsonDocument::Compact);
+    }
+
+    void rejectsInvalidScenario() {
+        QFETCH(QByteArray, contents);
+        model_->pause();
+        model_->stepOnce();
+        const auto previousTracks = model_->tracks();
+        const auto previousTime = model_->simTimeSeconds();
+        const auto previousName = model_->scenarioName();
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto url = writeScenario(directory, contents);
+        QVERIFY(url.isLocalFile());
+        QSignalSpy stateChanges(model_, &SimulatorModel::simStateChanged);
+        QVERIFY(!model_->loadScenario(url));
+        QVERIFY(!model_->scenarioError().isEmpty());
+        QCOMPARE(model_->tracks(), previousTracks);
+        QCOMPARE(model_->simTimeSeconds(), previousTime);
+        QCOMPARE(model_->scenarioName(), previousName);
+        QCOMPARE(stateChanges.count(), 0);
+        QVERIFY(model_->isPaused());
+    }
+
+    void rejectsRemoteScenarioUrl() {
+        QVERIFY(!model_->loadScenario(QUrl(QStringLiteral("https://example.invalid/scenario.json"))));
+        QVERIFY(!model_->scenarioError().isEmpty());
+        QCOMPARE(model_->trackCount(), 3);
+    }
+
 private:
+    static QUrl writeScenario(const QTemporaryDir& directory, const QByteArray& contents) {
+        QFile file(directory.filePath(QStringLiteral("scenario.json")));
+        if (!file.open(QIODevice::WriteOnly) || file.write(contents) != contents.size())
+            return {};
+        return QUrl::fromLocalFile(file.fileName());
+    }
+
     SimulatorModel* model_ = nullptr;
 };
 

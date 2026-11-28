@@ -1,4 +1,5 @@
 #include "SimulatorModel.hpp"
+#include "ScenarioLoader.hpp"
 #include "aeroradar/BuiltinScenario.hpp"
 
 #include <QDebug>
@@ -6,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <stdexcept>
+#include <utility>
 
 // --- Construction ---------------------------------------------------------
 
@@ -13,6 +15,7 @@ SimulatorModel::SimulatorModel(QObject* parent)
     : QObject(parent)
     , sim_(aeroradar::make_builtin_scenario())
     , timer_(new QTimer(this))
+    , scenarioName_(tr("Built-in synthetic scenario"))
 {
     trails_.resize(sim_.aircraft().size());
     connect(timer_, &QTimer::timeout, this, &SimulatorModel::onTick);
@@ -129,6 +132,46 @@ QVariantMap SimulatorModel::selected() const {
 }
 
 // --- Slots ----------------------------------------------------------------
+
+QString SimulatorModel::scenarioName() const { return scenarioName_; }
+
+QString SimulatorModel::scenarioError() const { return scenarioError_; }
+
+void SimulatorModel::setScenarioError(QString error) {
+    if (error == scenarioError_)
+        return;
+    scenarioError_ = std::move(error);
+    emit scenarioErrorChanged();
+}
+
+bool SimulatorModel::loadScenario(const QUrl& fileUrl) {
+    QString error;
+    auto loaded = loadScenarioFile(fileUrl, error);
+    if (!loaded) {
+        setScenarioError(std::move(error));
+        return false;
+    }
+    replaceScenario(std::move(loaded->name), std::move(loaded->simulation));
+    return true;
+}
+
+void SimulatorModel::loadBuiltinScenario() {
+    replaceScenario(tr("Built-in synthetic scenario"), aeroradar::make_builtin_scenario());
+}
+
+void SimulatorModel::replaceScenario(QString name, aeroradar::Simulator simulator) {
+    decltype(trails_) trails(simulator.aircraft().size());
+    simulator.pause();
+    timer_->stop();
+    sim_ = std::move(simulator);
+    trails_ = std::move(trails);
+    selectedIndex_ = 0;
+    scenarioName_ = std::move(name);
+    setScenarioError({});
+    emit scenarioChanged();
+    emit simStateChanged();
+    emit selectedChanged();
+}
 
 void SimulatorModel::play() {
     if (!sim_.is_paused())

@@ -143,10 +143,9 @@ Rectangle {
 
         TrackList {
             Layout.fillWidth: true
+            Layout.fillHeight: true
             simulator: ctrlPanel.simulator
         }
-
-        Item { Layout.fillHeight: true }
 
         // Synthetic-data disclaimer
         Rectangle {

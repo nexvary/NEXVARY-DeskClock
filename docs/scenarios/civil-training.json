@@ -1,0 +1,28 @@
+{
+  "format": "nexvary.aeroradar.scenario",
+  "version": 1,
+  "source": "synthetic",
+  "name": "Two civil aircraft",
+  "aircraft": [
+    {
+      "id": 21,
+      "label": "TEST-21",
+      "type": "fixed-wing",
+      "x_km": 2,
+      "y_km": -3,
+      "vx_km_s": 0.12,
+      "vy_km_s": 0.04,
+      "altitude_m": 800
+    },
+    {
+      "id": 22,
+      "label": "TEST-22",
+      "type": "multirotor",
+      "x_km": 5,
+      "y_km": 1,
+      "vx_km_s": 0.01,
+      "vy_km_s": 0.04,
+      "altitude_m": 150
+    }
+  ]
+}

@@ -63,6 +63,7 @@ ApplicationWindow {
                         {key: "flight", label: qsTr("Flight simulation")},
                         {key: "radar", label: qsTr("Radar PPI")},
                         {key: "traffic", label: qsTr("Air traffic")},
+                        {key: "scenarios", label: qsTr("Scenarios")},
                         {key: "diagnostics", label: qsTr("Diagnostics")},
                         {key: "settings", label: qsTr("Settings")},
                         {key: "help", label: qsTr("Help")}
@@ -117,7 +118,8 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 heading: qsTr("Overview")
                 details: [
-                    qsTr("Built-in synthetic scenario with %1 tracks.").arg(root.simulator.trackCount),
+                    qsTr("%1 with %2 synthetic tracks.")
+                        .arg(root.simulator.scenarioName).arg(root.simulator.trackCount),
                     root.simulator.paused ? qsTr("Simulation paused.") : qsTr("Simulation running."),
                     qsTr("The scenario uses a local planar coordinate frame and constant velocity.")
                 ]
@@ -147,7 +149,7 @@ ApplicationWindow {
                 details: [
                     qsTr("Application version %1").arg(Qt.application.version),
                     qsTr("Platform: %1").arg(Qt.platform.os),
-                    qsTr("Source: built-in synthetic simulation"),
+                    qsTr("Source: synthetic scenario"),
                     qsTr("Simulation elapsed: %1").arg(root.simulator.simTimeDisplay),
                     qsTr("Playback speed: %1×").arg(root.simulator.timeScale),
                     root.utcWallClock
@@ -165,6 +167,13 @@ ApplicationWindow {
                     qsTr("The radar shows local distances in kilometers. Altitude is measured in meters above the simulation reference plane, and heading is measured clockwise from north."),
                     qsTr("Synthetic data for research and education only. Do not use for navigation or air traffic control.")
                 ]
+            }
+
+            ScenarioWorkspace {
+                visible: root.workspace === "scenarios"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                simulator: root.simulator
             }
 
             AppearanceSettings {
