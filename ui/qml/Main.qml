@@ -163,6 +163,7 @@ ApplicationWindow {
                 heading: qsTr("Help")
                 details: [
                     qsTr("Use Play, Pause and Reset to control the simulation. Step advances one tick while paused, and the speed selector controls playback pacing."),
+                    qsTr("Drag to pan the radar, scroll to zoom, and use Center to restore the default range and view."),
                     qsTr("Select a track on the radar or in Active Tracks. Use Tab to move between buttons and Space to activate the focused button."),
                     qsTr("The radar shows local distances in kilometers. Altitude is measured in meters above the simulation reference plane, and heading is measured clockwise from north."),
                     qsTr("Synthetic data for research and education only. Do not use for navigation or air traffic control.")
