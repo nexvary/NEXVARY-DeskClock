@@ -66,6 +66,7 @@ ApplicationWindow {
                         {key: "radar", label: qsTr("Radar PPI")},
                         {key: "traffic", label: qsTr("Air traffic")},
                         {key: "scenarios", label: qsTr("Scenarios")},
+                        {key: "replay", label: qsTr("Replay")},
                         {key: "diagnostics", label: qsTr("Diagnostics")},
                         {key: "settings", label: qsTr("Settings")},
                         {key: "help", label: qsTr("Help")}
@@ -174,6 +175,13 @@ ApplicationWindow {
 
             ScenarioWorkspace {
                 visible: root.workspace === "scenarios"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                simulator: root.simulator
+            }
+
+            ReplayWorkspace {
+                visible: root.workspace === "replay"
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 simulator: root.simulator

@@ -1,5 +1,6 @@
 #include "SimulatorModel.hpp"
 #include "ScenarioLoader.hpp"
+#include "TrackView.hpp"
 #include "aeroradar/BuiltinScenario.hpp"
 
 #include <QDebug>
@@ -14,6 +15,7 @@
 SimulatorModel::SimulatorModel(QObject* parent)
     : QObject(parent)
     , sim_(aeroradar::make_builtin_scenario())
+    , replay_(this)
     , timer_(new QTimer(this))
     , scenarioName_(tr("Built-in synthetic scenario"))
     , scenarioText_(describeBuiltinScenario(scenarioName_, sim_))
@@ -55,6 +57,7 @@ void SimulatorModel::advance(bool singleStep) {
             trail.pop_front();
     }
 
+    replay_.captureTick(sim_.step_count(), sim_.aircraft());
     emit simStateChanged();
     if (selectedIndex_)
         emit selectedChanged();
@@ -96,28 +99,12 @@ int SimulatorModel::trackCount() const {
 }
 
 QVariantMap SimulatorModel::trackToVariant(std::size_t index) const {
-    const auto& a = sim_.aircraft()[index];
-    QVariantMap m;
-    m["id"]          = a.id;
-    m["label"]       = QString::fromStdString(a.label);
-    m["x_km"]        = a.x_km;
-    m["y_km"]        = a.y_km;
-    m["altitude_m"]  = a.altitude_m;
-    m["speed_kt"]    = aeroradar::speed_kt(a);
-    m["speed_mps"]   = aeroradar::speed_mps(a);
-    m["heading_deg"] = aeroradar::bearing_deg(a);
-    m["range_km"]    = aeroradar::range_km(a);
-    m["type"]        = (a.type == aeroradar::AircraftType::MULTIROTOR)
-                           ? QStringLiteral("UAS") : QStringLiteral("FIXED_WING");
-    m["selected"]    = (index == selectedIndex_);
-
     QVariantList trail;
     trail.reserve(static_cast<qsizetype>(trails_[index].size()));
     for (const auto& [x, y] : trails_[index]) {
         trail.append(QVariantMap{{"x_km", x}, {"y_km", y}});
     }
-    m["trail"] = trail;
-    return m;
+    return trackView(sim_.aircraft()[index], index == selectedIndex_, std::move(trail));
 }
 
 QVariantList SimulatorModel::tracks() const {
@@ -188,10 +175,15 @@ void SimulatorModel::loadBuiltinScenario() {
     replaceScenario(std::move(name), std::move(document), std::move(simulator));
 }
 
+void SimulatorModel::startRecording() {
+    replay_.startCapture(scenarioText_, sim_.step_count(), sim_.aircraft());
+}
+
 void SimulatorModel::replaceScenario(QString name, QString document, aeroradar::Simulator simulator) {
     decltype(trails_) trails(simulator.aircraft().size());
     simulator.pause();
     timer_->stop();
+    replay_.stopCapture();
     sim_ = std::move(simulator);
     trails_ = std::move(trails);
     selectedIndex_ = 0;
@@ -220,6 +212,7 @@ void SimulatorModel::pause() {
 }
 
 void SimulatorModel::reset() {
+    replay_.stopCapture();
     sim_.reset();
     for (auto& t : trails_) t.clear();
     emit simStateChanged();

@@ -42,6 +42,8 @@ if(AERORADAR_BUILD_DESKTOP)
     qt_standard_project_setup(REQUIRES 6.5)
 
     qt_add_library(aeroradar_desktop_model STATIC
+        apps/desktop/Recording.cpp
+        apps/desktop/ReplayModel.cpp
         apps/desktop/ScenarioLoader.cpp
         apps/desktop/SimulatorModel.cpp
     )
@@ -61,6 +63,7 @@ if(AERORADAR_BUILD_DESKTOP)
         ui/qml/AeroTheme.qml
         ui/qml/AppearanceSettings.qml
         ui/qml/RadarPpi.qml
+        ui/qml/ReplayWorkspace.qml
         ui/qml/ScenarioWorkspace.qml
         ui/qml/StatusStrip.qml
         ui/qml/FlightInstruments.qml
