@@ -52,6 +52,9 @@ Rectangle {
                     }
                     Text {
                         text: modelData.val
+                        textFormat: Text.PlainText
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: 160
                         font.pixelSize: 20; font.bold: true
                         color: AeroTheme.accentBlue; font.family: AeroTheme.monoFont
                     }

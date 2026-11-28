@@ -41,11 +41,14 @@ if(AERORADAR_BUILD_DESKTOP)
     find_package(Qt6 6.5 REQUIRED COMPONENTS Quick QuickControls2)
     qt_standard_project_setup(REQUIRES 6.5)
 
-    qt_add_executable(aeroradar_desktop
-        apps/desktop/main.cpp
+    qt_add_library(aeroradar_desktop_model STATIC
+        apps/desktop/ScenarioLoader.cpp
         apps/desktop/SimulatorModel.cpp
     )
-    target_include_directories(aeroradar_desktop PRIVATE apps/desktop)
+    target_include_directories(aeroradar_desktop_model PUBLIC apps/desktop)
+    target_link_libraries(aeroradar_desktop_model PUBLIC Qt6::Core aeroradar_core)
+
+    qt_add_executable(aeroradar_desktop apps/desktop/main.cpp)
     target_compile_definitions(aeroradar_desktop PRIVATE AERORADAR_VERSION="${PROJECT_VERSION}")
 
     # AeroTheme.qml is a pragma Singleton; mark it so qt_add_qml_module
@@ -58,6 +61,7 @@ if(AERORADAR_BUILD_DESKTOP)
         ui/qml/AeroTheme.qml
         ui/qml/AppearanceSettings.qml
         ui/qml/RadarPpi.qml
+        ui/qml/ScenarioWorkspace.qml
         ui/qml/StatusStrip.qml
         ui/qml/FlightInstruments.qml
         ui/qml/SimulationControls.qml
@@ -71,12 +75,14 @@ if(AERORADAR_BUILD_DESKTOP)
     target_link_libraries(aeroradar_desktop PRIVATE
         Qt6::Quick
         Qt6::QuickControls2
-        aeroradar_core)
+        aeroradar_desktop_model)
 
     if(MSVC)
         target_compile_options(aeroradar_desktop PRIVATE /W4)
+        target_compile_options(aeroradar_desktop_model PRIVATE /W4)
     else()
         target_compile_options(aeroradar_desktop PRIVATE -Wall -Wextra)
+        target_compile_options(aeroradar_desktop_model PRIVATE -Wall -Wextra)
     endif()
 
     # --- Qt integration tests (QTest) ---
@@ -87,21 +93,23 @@ if(AERORADAR_BUILD_DESKTOP)
 
         qt_add_executable(simulator_model_tests
             tests/integration/SimulatorModelTests.cpp
-            apps/desktop/SimulatorModel.cpp
         )
-        target_include_directories(simulator_model_tests PRIVATE apps/desktop tests)
         target_link_libraries(simulator_model_tests PRIVATE
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::Test
-            aeroradar_core)
+            aeroradar_desktop_model)
+
+        qt_add_resources(simulator_model_tests scenario_fixtures
+            PREFIX "/scenarios"
+            BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+            FILES docs/scenarios/civil-training.json
+        )
 
         qt_add_executable(dashboard_tests
             tests/integration/DashboardTests.cpp
-            apps/desktop/SimulatorModel.cpp
         )
-        target_include_directories(dashboard_tests PRIVATE apps/desktop)
-        target_link_libraries(dashboard_tests PRIVATE Qt6::Quick Qt6::Test aeroradar_core)
+        target_link_libraries(dashboard_tests PRIVATE Qt6::Quick Qt6::Test aeroradar_desktop_model)
         qt_add_resources(dashboard_tests dashboard_qml
             PREFIX "/qt/qml/AeroRadar"
             BASE "${CMAKE_CURRENT_SOURCE_DIR}"

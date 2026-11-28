@@ -17,7 +17,7 @@ No real radar, ADS-B, or SDR hardware is required. All tracks are generated synt
 
 ## Current capabilities
 
-The optional Qt desktop displays a synthetic PPI with range rings, a sweep, selectable tracks, track history and data readouts. The built-in three-aircraft scenario supports pause, resume, reset and single-step. Playback speed ranges from 0.25× to 4×. The simulator uses constant-velocity planar motion. The desktop has flight, radar, traffic, overview, diagnostics and help workspaces, with persistent light and dark appearance settings.
+The optional Qt desktop displays a synthetic PPI with range rings, a sweep, selectable tracks, track history and data readouts. The built-in three-aircraft scenario supports pause, resume, reset and single-step. Playback speed ranges from 0.25× to 4×. The Scenarios workspace opens [versioned local JSON scenarios](docs/scenarios/README.md). The simulator uses constant-velocity planar motion. The desktop has flight, radar, traffic, overview, diagnostics and help workspaces, with persistent light and dark appearance settings.
 
 The project lives in the existing `nexvary/NEXVARY-DeskClock` repository. The latest verified development baseline before this work is `d173a1e89e3f17d58c7c0a7cadbe6fd53c1a86b9` on `feature/p1-qml-components`. It produced unsigned Windows x64 portable and installer candidates and rendered Linux dashboard screenshots. See [development log](docs/DEVELOPMENT-LOG.md) for exact CI jobs, artifacts and current verification.
 
@@ -99,8 +99,8 @@ GitHub Actions runs for pulls and for pushes to the configured development branc
 ## Limitations
 
 - Track motion is constant-velocity planar — no geodesy, flight dynamics, or terrain.
-- Weather, terrain and external scenario loading are pending.
-- No persistent scenario serialisation or replay.
+- Weather, terrain and in-app scenario editing are pending.
+- Local scenario import is available. Save, migration and replay are pending.
 - No digital signing on Windows binaries.
 - CI captures Linux screenshots from a running window under Xvfb. The Windows runner exercises packaged app startup and silent installation.
 

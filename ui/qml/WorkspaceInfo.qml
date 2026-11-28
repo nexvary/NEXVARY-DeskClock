@@ -28,6 +28,7 @@ Rectangle {
                 required property string modelData
                 Layout.fillWidth: true
                 text: modelData
+                textFormat: Text.PlainText
                 wrapMode: Text.WordWrap
                 color: AeroTheme.textPrime
                 font.pixelSize: 14

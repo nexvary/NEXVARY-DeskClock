@@ -2,6 +2,7 @@
 #include "aeroradar/Simulator.hpp"
 #include <QObject>
 #include <QTimer>
+#include <QUrl>
 #include <QVariantList>
 #include <QVariantMap>
 #include <deque>
@@ -18,6 +19,8 @@ class SimulatorModel : public QObject {
     Q_PROPERTY(QString simTimeDisplay  READ simTimeDisplay NOTIFY simStateChanged)
     Q_PROPERTY(int     trackCount      READ trackCount     NOTIFY simStateChanged)
     Q_PROPERTY(QVariantList tracks     READ tracks         NOTIFY simStateChanged)
+    Q_PROPERTY(QString scenarioName READ scenarioName NOTIFY scenarioChanged)
+    Q_PROPERTY(QString scenarioError READ scenarioError NOTIFY scenarioErrorChanged)
     Q_PROPERTY(double  timeScale       READ timeScale    WRITE setTimeScale NOTIFY timeScaleChanged)
     Q_PROPERTY(QVariantMap  selected   READ selected       NOTIFY selectedChanged)
 
@@ -35,6 +38,8 @@ public:
     [[nodiscard]] QString      simTimeDisplay()  const; // "HH:MM:SS"
     [[nodiscard]] int          trackCount()      const;
     [[nodiscard]] QVariantList tracks()          const;
+    [[nodiscard]] QString      scenarioName() const;
+    [[nodiscard]] QString      scenarioError() const;
     [[nodiscard]] double       timeScale() const;
     [[nodiscard]] QVariantMap  selected()        const; // currently selected track
 
@@ -43,6 +48,8 @@ public slots:
     Q_INVOKABLE void pause();
     Q_INVOKABLE void reset();
     Q_INVOKABLE void stepOnce();
+    Q_INVOKABLE bool loadScenario(const QUrl& fileUrl);
+    Q_INVOKABLE void loadBuiltinScenario();
     Q_INVOKABLE void setTimeScale(double scale);
     Q_INVOKABLE void selectTrack(int id);
 
@@ -50,8 +57,12 @@ signals:
     void simStateChanged();
     void selectedChanged();
     void timeScaleChanged();
+    void scenarioChanged();
+    void scenarioErrorChanged();
 
 private:
+    void replaceScenario(QString name, aeroradar::Simulator simulator);
+    void setScenarioError(QString error);
     void onTick();
     void advance(bool singleStep);
     [[nodiscard]] QVariantMap trackToVariant(std::size_t index) const;
@@ -59,6 +70,8 @@ private:
     aeroradar::Simulator sim_;
     QTimer*              timer_;
     double timeScale_{1.0};
+    QString scenarioName_;
+    QString scenarioError_;
     // Bounded trail per aircraft, in simulation order.
     std::vector<std::deque<std::pair<double,double>>> trails_;
     std::optional<std::size_t> selectedIndex_;

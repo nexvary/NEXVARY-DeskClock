@@ -52,6 +52,16 @@ Branch `engineering/p2-fixed-step-controls` starts at P1 head `e485730896317ed41
 
 Local Debian 13, GCC 14.2.0 and Qt 6.5.3 builds passed `ctest --no-tests=error --output-on-failure` in Debug and Release, with four entries in each configuration. The run covers 30 core cases, 18 model cases, two Qt dashboard cases and one startup test. A regression compares 300 automatic and manual steps on the built-in scenario and checks exact coordinate and elapsed-time equality within the build. UI tests verify the initial speed selection, keyboard rate and pause controls, and manual and continuous advancement. Source hygiene passed.
 
+### Hosted P1 and fixed-step playback
+
+P1 head `e485730896317ed413d378c2fca5edb97786381b` and fixed-step head `7f739afb8b5ac929f993a9a8061d2e6b96d704c7` passed hosted source hygiene and the Linux/Windows CI matrix including Windows package startup, silent install and uninstall. [PR #8](https://github.com/nexvary/NEXVARY-DeskClock/pull/8) · [P1 CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186659107) · [PR #9](https://github.com/nexvary/NEXVARY-DeskClock/pull/9) · [Fixed-step CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46187093999)
+
+## 2026-11-28 — P2 synthetic scenario loading
+
+Branch `engineering/p2-scenario-loading` starts at the fixed-step head. Commit `f2e065fb9287e0a99617fced262e1fa34f98965f` adds a Scenarios workspace, v1 schema and working civil example. A Qt file boundary reads only bounded local inputs and validates them before replacing the current simulator. Success loads the new scenario at time zero while paused. Failure leaves the active simulator untouched and updates the visible error. The track list is scrollable and keeps the current track identities across ticks.
+
+Local Debian 13 GCC 14.2.0 and Qt 6.5.3 passed `ctest --no-tests=error --output-on-failure` in Debug and Release, with four entries each. Model tests exercised accepted load and reset, restoration of the built-in scenario, remote rejection and eight invalid-file rows. Dashboard tests exercised navigation, display of load errors and restoration from the real QML window. The draft 2020-12 schema and the checked-in example passed Python jsonschema validation. Source hygiene passed. Native file-chooser interactions and Windows packaging are covered separately by platform review and hosted verification.
+
 ### Resume point
 
-Continue on `engineering/p2-fixed-step-controls` after its hosted checks. The next P2 dependency is a versioned scenario contract with bounded loading, model validation and tests for rejection without state mutation. Preserve the core/Qt/IO boundaries. P1 still needs the scenario, replay and research workspaces and accessibility, high-DPI and multi-display verification. Upstream draft integration, release license review and production release gates remain open. The full inventory is in [feature parity](FEATURE-PARITY.md).
+Continue on `engineering/p2-scenario-loading` after the hosted checks. Extend the versioned scenario model with waypoint and altitude profiles, then add an editor that shares its validation contract. Radar zoom, pan and layers can progress independently against the existing model. P1 still needs replay and research workspaces and assistive-technology, high-DPI and multi-display verification. Upstream draft integration, release license review and production release gates remain open. See [feature parity](FEATURE-PARITY.md).

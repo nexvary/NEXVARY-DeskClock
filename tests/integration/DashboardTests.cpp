@@ -99,6 +99,20 @@ private slots:
         click(play);
         QTRY_VERIFY(simulator.simTimeSeconds() > 0.1);
         QVERIFY(window->property("utcWallClock").toString().endsWith(QStringLiteral(" UTC")));
+        auto* scenarios = findItem(window->contentItem(), QStringLiteral("workspace-scenarios"));
+        QVERIFY(scenarios);
+        click(scenarios);
+        QCOMPARE(window->property("workspace").toString(), QStringLiteral("scenarios"));
+        auto* error = findItem(window->contentItem(), QStringLiteral("scenario-load-error"));
+        auto* builtin = findItem(window->contentItem(), QStringLiteral("scenario-builtin"));
+        QVERIFY(error && builtin);
+        QVERIFY(!simulator.loadScenario(QUrl(QStringLiteral("https://example.invalid/scenario.json"))));
+        QVERIFY(error->isVisible());
+        click(builtin);
+        QVERIFY(!error->isVisible());
+        QCOMPARE(simulator.simTimeSeconds(), 0.0);
+        QVERIFY(simulator.isPaused());
+
         QCOMPARE(warnings.size(), 0);
     }
 
