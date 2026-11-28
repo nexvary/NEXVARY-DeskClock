@@ -9,32 +9,17 @@ Nexvary Inc. — Educational / Research Platform
 
 ## What it is
 
-AeroRadar is an open-source, educational desktop application for visualising synthetic civil aviation tracks. It runs a deterministic constant-velocity simulation and renders a Plan-Position Indicator (PPI) radar display. The project exists to explore Qt/QML cockpit UI patterns, C++20 simulation architecture, and cross-platform CI tooling.
+AeroRadar is an educational desktop application for visualising synthetic civil aviation tracks. It runs a deterministic constant-velocity simulation and renders a Plan-Position Indicator (PPI) radar display. The project exists to explore Qt/QML cockpit UI patterns, C++20 simulation architecture, and cross-platform CI tooling.
 
 No real radar, ADS-B, or SDR hardware is required. All tracks are generated synthetically.
 
 ---
 
-## Status summary
+## Current capabilities
 
-| Capability | Status |
-|---|---|
-| Core simulation kernel (C++20) | Implemented & verified |
-| 24 unit tests (Debug + Release) | Implemented & verified |
-| Qt/QML desktop shell | Implemented |
-| Synthetic PPI radar display | Implemented |
-| Track selection + data readout | Implemented |
-| Pause / Resume / Reset controls | Implemented |
-| Scenario timeline bar | Implemented |
-| CI: Ubuntu + Windows builds | Passing |
-| QML offscreen smoke test | Passing (Linux) |
-| Windows portable ZIP | Planned P1.1 |
-| Windows installer | Planned P1.1 |
-| 3-D scene view | Planned P2 |
-| ADS-B passive receiver | Planned P3 (licensing review required) |
-| Arabic RTL localisation | Planned P2 |
+The optional Qt desktop displays a synthetic PPI with range rings, a sweep, selectable tracks, track history and data readouts. The built-in three-aircraft scenario supports pause, resume and reset. The simulator uses constant-velocity planar motion.
 
----
+The project lives in the existing `nexvary/NEXVARY-DeskClock` repository. The latest verified development baseline before this work is `d173a1e89e3f17d58c7c0a7cadbe6fd53c1a86b9` on `feature/p1-qml-components`. It produced unsigned Windows x64 portable and installer candidates and rendered Linux dashboard screenshots. See [development log](docs/DEVELOPMENT-LOG.md) for exact CI jobs, artifacts and current verification.
 
 ## Quick start
 
@@ -52,7 +37,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-Expected: **All 24 simulator tests passed.**
+CTest runs the simulator unit suite. Use `ctest --test-dir build -V` to see individual case results.
 
 ### Build — desktop Qt app
 
@@ -69,7 +54,7 @@ build\Release\aeroradar_desktop.exe  # Windows
 QT_QPA_PLATFORM=offscreen ./build/aeroradar_desktop --smoke
 ```
 
-Exit 0 = QML loaded cleanly. Exit 1 = load failure.
+The smoke command exits with 0 after starting the QML application and with 1 on a root-object load failure or a warning from the QML engine.
 
 ---
 
@@ -94,7 +79,8 @@ ui/qml/                   QML module "AeroRadar"
 
 tests/
   TestMacros.hpp          AERO_REQUIRE / AERO_TEST — NDEBUG-safe
-  unit/SimulatorTests.cpp 24 deterministic unit tests
+  unit/SimulatorTests.cpp Simulator regression suite
+  integration/            Qt model tests
 ```
 
 The simulation kernel (`aeroradar_core`) is a pure C++ static library with no Qt or platform dependency. The Qt desktop shell is an optional layer on top.
@@ -103,10 +89,10 @@ The simulation kernel (`aeroradar_core`) is a pure C++ static library with no Qt
 
 ## CI
 
-GitHub Actions runs on every push to `main`, `feature/**`, `quality/**`, and all pull requests:
+GitHub Actions runs for pulls and for pushes to the configured development branches.
 
-- **Core job** — builds and tests in Debug + Release on Ubuntu and Windows.
-- **Desktop job** — builds with Qt 6.5, runs the core tests, and runs the QML offscreen smoke test.
+- **Core job** — builds and tests in Debug and Release on Ubuntu with GCC and Clang and on Windows with MSVC.
+- **Desktop job** — builds with Qt 6.5, runs core, model and smoke tests, renders Linux screenshots and verifies Windows packaging.
 
 ---
 
@@ -116,7 +102,7 @@ GitHub Actions runs on every push to `main`, `feature/**`, `quality/**`, and all
 - Weather, scenario, and environment fields are hardcoded placeholders.
 - No persistent scenario serialisation or replay.
 - No digital signing on Windows binaries.
-- Screenshots require a live desktop session; CI only validates headless smoke loading.
+- CI captures Linux screenshots from a running window under Xvfb. The Windows runner exercises packaged app startup and silent installation.
 
 ---
 
@@ -132,8 +118,8 @@ AeroRadar is a research and educational simulation tool:
 
 ## Licence
 
-See `CONTRIBUTING.md` and `SECURITY.md` for contribution and vulnerability disclosure guidelines.  
-Third-party dependency notices are documented in `docs/THIRD_PARTY_ADOPTION_MATRIX.md`.
+See [contribution guidelines](CONTRIBUTING.md), [engineering instructions](AGENTS.md) and [security reporting](SECURITY.md).
+The repository currently has no explicit open-source license grant for NEXVARY source. See the [dependency and license review](docs/THIRD_PARTY_ADOPTION_MATRIX.md).
 
 ---
 

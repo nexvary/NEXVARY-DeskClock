@@ -1,0 +1,9 @@
+# Security and data handling
+
+Report vulnerabilities through the private channel in the repository [security policy](../SECURITY.md). Keep secrets and sensitive recordings out of Git, CI logs, issue reports and screenshots.
+
+The current desktop accepts an embedded synthetic scenario and optional screenshot output paths. Simulator construction rejects duplicate aircraft IDs, non-finite state and unsupported aircraft types. Steps reject non-finite durations and overflow before changing the state. The Qt adapter confines simulation mutation to the GUI thread.
+
+Before exposing file or dataset imports, cap file size, record count, nesting depth and string length. Validate schema, version, units and numerical ranges before updating the active simulation. Write outputs atomically, preserve user files and keep configuration free of credentials. Log failures using bounded fields, with source labels and redaction appropriate to civil aviation data.
+
+Archive an inventory of versioned runtime dependencies. Verify licenses and redistribution obligations for Qt modules, Visual C++ runtime, NSIS and assets. Scan support branches for vulnerable versions and run sanitizer and static-analysis gates. Review privacy, source terms and retention before accepting recorded or public civil data.
