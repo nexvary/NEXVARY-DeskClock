@@ -1,47 +1,23 @@
 #include "SimulatorModel.hpp"
+#include "aeroradar/BuiltinScenario.hpp"
+
 #include <QDebug>
 #include <QString>
 #include <algorithm>
-#include <cmath>
-#include <numbers>
+#include <array>
 #include <stdexcept>
-
-// --- Scenario definition --------------------------------------------------
-
-aeroradar::Simulator SimulatorModel::makeScenario() {
-    using namespace aeroradar;
-    // All positions/velocities: purely illustrative synthetic data.
-    // Headings expressed as CW degrees from north:
-    //   AC-01:  heading ~087°, speed ~61 m/s (118 kt), fixed-wing
-    //   UAS-01: heading ~200°, speed ~19 m/s (36 kt),  multirotor
-    //   UAS-02: heading ~310°, speed ~43 m/s (83 kt),  multirotor
-    const double kts2kmps = 0.51444 / 1000.0;
-    auto vel = [&](double heading_deg, double speed_kt_val) {
-        const double r = heading_deg * (std::numbers::pi / 180.0);
-        const double spd = speed_kt_val * kts2kmps;
-        return std::make_pair(spd * std::sin(r), spd * std::cos(r));
-    };
-    auto [vx1, vy1] = vel(87.0,  118.0);
-    auto [vx2, vy2] = vel(200.0,  36.0);
-    auto [vx3, vy3] = vel(310.0,  83.0);
-
-    return Simulator({
-        { 1,  14.0,   5.0,  vx1, vy1, 3500.0, AircraftType::FIXED_WING, "AC-01"  },
-        { 2,  -6.5, -17.5,  vx2, vy2,  150.0, AircraftType::MULTIROTOR, "UAS-01" },
-        { 3,  -9.0,   8.0,  vx3, vy3, 1200.0, AircraftType::MULTIROTOR, "UAS-02" },
-    });
-}
 
 // --- Construction ---------------------------------------------------------
 
 SimulatorModel::SimulatorModel(QObject* parent)
     : QObject(parent)
-    , sim_(makeScenario())
+    , sim_(aeroradar::make_builtin_scenario())
     , timer_(new QTimer(this))
 {
     trails_.resize(sim_.aircraft().size());
     connect(timer_, &QTimer::timeout, this, &SimulatorModel::onTick);
-    timer_->setInterval(1000 / TICKS_PER_SECOND); // 100 ms
+    timer_->setTimerType(Qt::PreciseTimer);
+    timer_->setInterval(TICK_INTERVAL_MS);
     if (!sim_.aircraft().empty())
         selectedIndex_ = 0;
     timer_->start();
@@ -49,11 +25,18 @@ SimulatorModel::SimulatorModel(QObject* parent)
 
 // --- Tick -----------------------------------------------------------------
 
-void SimulatorModel::onTick() {
-    if (sim_.is_paused())
+void SimulatorModel::onTick() { advance(false); }
+
+void SimulatorModel::stepOnce() { advance(true); }
+
+void SimulatorModel::advance(bool singleStep) {
+    if (singleStep != sim_.is_paused())
         return;
     try {
-        sim_.step(SIM_DT_S);
+        if (singleStep)
+            sim_.step_once(SIM_DT_S);
+        else
+            sim_.step(SIM_DT_S);
     } catch (const std::overflow_error& error) {
         qCritical() << "Simulation paused:" << error.what();
         pause();
@@ -77,7 +60,21 @@ void SimulatorModel::onTick() {
 
 bool SimulatorModel::isPaused() const { return sim_.is_paused(); }
 
-double SimulatorModel::simTimeSeconds() const { return sim_.elapsed_seconds(); }
+double SimulatorModel::simTimeSeconds() const {
+    return static_cast<double>(sim_.step_count()) / TICKS_PER_SECOND;
+}
+
+double SimulatorModel::timeScale() const { return timeScale_; }
+
+void SimulatorModel::setTimeScale(double scale) {
+    constexpr std::array rates{0.25, 0.5, 1.0, 2.0, 4.0};
+    if (scale == timeScale_ || std::ranges::find(rates, scale) == rates.end())
+        return;
+    timeScale_ = scale;
+    // All supported rates map exactly to whole milliseconds.
+    timer_->setInterval(static_cast<int>(TICK_INTERVAL_MS / scale));
+    emit timeScaleChanged();
+}
 
 QString SimulatorModel::simTimeDisplay() const {
     const qulonglong total = sim_.step_count() / TICKS_PER_SECOND;

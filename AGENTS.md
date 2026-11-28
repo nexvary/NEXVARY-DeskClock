@@ -1,6 +1,6 @@
 # NEXVARY AeroRadar engineering instructions
 
-NEXVARY AeroRadar is NEXVARY Inc.'s civilian flight simulation and research desktop application. The existing GitHub repository is `nexvary/NEXVARY-DeskClock`. The application labels synthetic and recorded data explicitly. Operational navigation, operational air traffic control, aircraft control, military tracking, targeting, interception, jamming and spoofing are outside the product scope.
+NEXVARY AeroRadar is NEXVARY Inc.'s civilian flight simulation and research desktop application. The existing GitHub repository is `nexvary/NEXVARY-DeskClock`. Every data view must label whether its source is synthetic or recorded. Operational navigation, operational air traffic control, aircraft control, military tracking, targeting, interception, jamming and spoofing are outside the product scope.
 
 ## Architecture and requirements
 

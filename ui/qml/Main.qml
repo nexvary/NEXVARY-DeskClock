@@ -13,6 +13,13 @@ ApplicationWindow {
     objectName: "aeroradar-window"
     title: qsTr("NEXVARY AeroRadar — Civil Aviation Research Lab")
     color: AeroTheme.bgDeep
+    palette.window: AeroTheme.bgPanel
+    palette.base: AeroTheme.bgCard
+    palette.button: AeroTheme.bgRaised
+    palette.buttonText: AeroTheme.textPrime
+    palette.text: AeroTheme.textPrime
+    palette.highlight: AeroTheme.accentBlue
+    palette.highlightedText: AeroTheme.bgPanel
 
     readonly property var simulator: aeroSimulatorModel
     property string workspace: "flight"
@@ -142,6 +149,7 @@ ApplicationWindow {
                     qsTr("Platform: %1").arg(Qt.platform.os),
                     qsTr("Source: built-in synthetic simulation"),
                     qsTr("Simulation elapsed: %1").arg(root.simulator.simTimeDisplay),
+                    qsTr("Playback speed: %1×").arg(root.simulator.timeScale),
                     root.utcWallClock
                 ]
             }
@@ -152,7 +160,7 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 heading: qsTr("Help")
                 details: [
-                    qsTr("Use Play, Pause and Reset to control the simulation."),
+                    qsTr("Use Play, Pause and Reset to control the simulation. Step advances one tick while paused, and the speed selector controls playback pacing."),
                     qsTr("Select a track on the radar or in Active Tracks. Use Tab to move between buttons and Space to activate the focused button."),
                     qsTr("The radar shows local distances in kilometers. Altitude is measured in meters above the simulation reference plane, and heading is measured clockwise from north."),
                     qsTr("Synthetic data for research and education only. Do not use for navigation or air traffic control.")

@@ -38,7 +38,7 @@ An additional runtime check of the desktop identified repeated Canvas font error
 
 The exact P0 PR head `413afb08b75964735af2c9887e9666b20719a742` passed both CI trigger runs and both source-hygiene runs. Results cover GCC and Clang on Ubuntu, MSVC on Windows, and Qt desktop Debug and Release on both systems. The Windows desktop job completed portable startup, silent install, installed startup and removal while keeping unrelated files. [PR #7](https://github.com/nexvary/NEXVARY-DeskClock/pull/7) · [PR CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411) · [Push CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186040183) · [Hygiene](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080459)
 
-GitHub published the [Windows installer](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15280031036), [portable ZIP](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15280016046), and [Linux screenshots](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15279523171) as workflow candidates.
+GitHub published the [Windows installer](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15280031036), [portable ZIP](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15280016046), and [Linux screenshots](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46186080411/artifacts/15279523171) as workflow candidates. Local inspection independently verified the outer archive hashes, the bundled installer and portable hashes, essential portable runtime DLLs and both screenshot dimensions.
 
 ## 2026-11-28 — P1 desktop workspaces
 
@@ -46,6 +46,12 @@ Branch `engineering/p1-desktop-workspaces` starts at the tested P0 head. Commit 
 
 Local Debian 13, GCC 14.2.0 and Qt 6.5.3 builds passed Debug and Release CTest (4/4 entries in each). The dashboard tests opened the actual QML window, exercised Tab and Space navigation, stable track focus through a simulation tick, track selection, keyboard appearance switching, persistence after window recreation, and pointer pause, reset and resume. Release produced dark 1440×900 and 1200×760 images and a light 1200×760 image offscreen. Source hygiene passed.
 
-### Remaining work
+## 2026-11-28 — P2 fixed-step playback
 
-Upstream draft integration and redistribution review remain open. Complete the remaining P1 workspace, assistive technology, high-DPI and multi-display verification alongside model and data stages. The dependency-ready P2 slice is fixed-step playback and a shared built-in scenario. See [feature parity](FEATURE-PARITY.md).
+Branch `engineering/p2-fixed-step-controls` starts at P1 head `e485730896317ed413d378c2fca5edb97786381b`. Commit `ba38fe3d8a6e6f7da375f2b1f5c94b68c1bb3b0c` moves the existing built-in scenario into the dependency-free core and adds paused single-step and five playback rates. Playback rate changes the wall timer interval while each model step advances 100 ms of simulation time. Reset keeps the pause state and selected playback rate.
+
+Local Debian 13, GCC 14.2.0 and Qt 6.5.3 builds passed `ctest --no-tests=error --output-on-failure` in Debug and Release, with four entries in each configuration. The run covers 30 core cases, 18 model cases, two Qt dashboard cases and one startup test. A regression compares 300 automatic and manual steps on the built-in scenario and checks exact coordinate and elapsed-time equality within the build. UI tests verify the initial speed selection, keyboard rate and pause controls, and manual and continuous advancement. Source hygiene passed.
+
+### Resume point
+
+Continue on `engineering/p2-fixed-step-controls` after its hosted checks. The next P2 dependency is a versioned scenario contract with bounded loading, model validation and tests for rejection without state mutation. Preserve the core/Qt/IO boundaries. P1 still needs the scenario, replay and research workspaces and accessibility, high-DPI and multi-display verification. Upstream draft integration, release license review and production release gates remain open. The full inventory is in [feature parity](FEATURE-PARITY.md).

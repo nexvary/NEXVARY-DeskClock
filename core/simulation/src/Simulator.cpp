@@ -26,8 +26,16 @@ Simulator::Simulator(std::vector<Aircraft> aircraft)
 }
 
 void Simulator::step(double seconds) {
-    if (paused_) return;
+    if (!paused_)
+        advance(seconds);
+}
 
+void Simulator::step_once(double seconds) {
+    if (paused_)
+        advance(seconds);
+}
+
+void Simulator::advance(double seconds) {
     if (!std::isfinite(seconds) || seconds < 0.0)
         throw std::invalid_argument("step duration must be finite and nonnegative");
 

@@ -1,3 +1,4 @@
+#include "aeroradar/BuiltinScenario.hpp"
 #include "aeroradar/Simulator.hpp"
 #include "../TestMacros.hpp"
 #include <cmath>
@@ -260,6 +261,43 @@ AERO_TEST(step_rejects_range_overflow_atomically) {
     AERO_REQUIRE(sim.aircraft()[1].x_km == 0.0);
     AERO_REQUIRE(sim.elapsed_seconds() == 0.0);
     AERO_REQUIRE(sim.step_count() == 0);
+}
+
+AERO_TEST(builtin_is_repeatable_with_manual_steps) {
+    using namespace aeroradar;
+    auto running = make_builtin_scenario();
+    auto paused = make_builtin_scenario();
+    paused.pause();
+    running.step_once(0.1);
+    AERO_REQUIRE(running.step_count() == 0);
+    AERO_REQUIRE(paused.aircraft().size() == 3);
+    AERO_REQUIRE(paused.aircraft()[0].label == "AC-01");
+    for (int tick = 0; tick < 300; ++tick) {
+        running.step(0.1);
+        paused.step_once(0.1);
+    }
+
+    AERO_REQUIRE(paused.is_paused());
+    AERO_REQUIRE(paused.step_count() == 300);
+    AERO_REQUIRE(paused.elapsed_seconds() == running.elapsed_seconds());
+    for (std::size_t i = 0; i < running.aircraft().size(); ++i) {
+        AERO_REQUIRE(paused.aircraft()[i].x_km == running.aircraft()[i].x_km);
+        AERO_REQUIRE(paused.aircraft()[i].y_km == running.aircraft()[i].y_km);
+    }
+
+    paused.reset();
+    AERO_REQUIRE(paused.step_count() == 0);
+    AERO_REQUIRE(paused.is_paused());
+    AERO_REQUIRE(paused.aircraft()[0].x_km == 14.0);
+    AERO_REQUIRE(paused.aircraft()[0].y_km == 5.0);
+}
+
+AERO_TEST(manual_step_rejects_invalid_duration) {
+    aeroradar::Simulator sim({});
+    sim.pause();
+    AERO_REQUIRE_THROWS(std::invalid_argument, sim.step_once(-1.0));
+    AERO_REQUIRE(sim.step_count() == 0);
+    AERO_REQUIRE(sim.is_paused());
 }
 
 int main() {
