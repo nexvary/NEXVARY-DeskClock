@@ -5,6 +5,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <deque>
+#include <optional>
 #include <vector>
 
 // Qt bridge: wraps aeroradar::Simulator for QML consumption.
@@ -20,7 +21,8 @@ class SimulatorModel : public QObject {
     Q_PROPERTY(QVariantMap  selected   READ selected       NOTIFY selectedChanged)
 
 public:
-    static constexpr double SIM_DT_S   = 0.1;   // physics timestep, seconds
+    static constexpr int TICKS_PER_SECOND = 10;
+    static constexpr double SIM_DT_S   = 1.0 / TICKS_PER_SECOND;   // physics timestep, seconds
     static constexpr double RANGE_KM   = 40.0;  // display radius
     static constexpr int    TRAIL_LEN  = 25;    // history points per track
 
@@ -47,11 +49,11 @@ private:
     static aeroradar::Simulator makeScenario();
 
     void onTick();
-    [[nodiscard]] QVariantMap trackToVariant(const aeroradar::Aircraft& a) const;
+    [[nodiscard]] QVariantMap trackToVariant(std::size_t index) const;
 
     aeroradar::Simulator sim_;
     QTimer*              timer_;
-    // Ring-buffer trail: map from aircraft id -> deque of (x_km, y_km)
+    // Bounded trail per aircraft, in simulation order.
     std::vector<std::deque<std::pair<double,double>>> trails_;
-    int selectedId_{ -1 };
+    std::optional<std::size_t> selectedIndex_;
 };

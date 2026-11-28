@@ -23,12 +23,21 @@ int main(int argc, char* argv[]) {
             resizeForScreenshot = std::strcmp(argv[i], "--screenshot-resized") == 0;
             screenshotMode = true;
             screenshotPath = argv[++i];
+        } else if (std::strcmp(argv[i], "--screenshot") == 0 ||
+                   std::strcmp(argv[i], "--screenshot-resized") == 0) {
+            qCritical("A screenshot output path is required");
+            return 2;
         }
+    }
+
+    if (smokeMode && screenshotMode) {
+        qCritical("Choose either --smoke or a screenshot mode");
+        return 2;
     }
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("NEXVARY AeroRadar");
-    app.setApplicationVersion("0.1.0");
+    app.setApplicationVersion(AERORADAR_VERSION);
     app.setOrganizationName("Nexvary Inc.");
 
     SimulatorModel simulatorModel;

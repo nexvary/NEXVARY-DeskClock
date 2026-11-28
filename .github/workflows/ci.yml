@@ -2,7 +2,7 @@ name: AeroRadar CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'develop', 'quality/**']
+    branches: [main, 'feature/**', 'develop', 'quality/**', 'engineering/**']
   pull_request:
 
 permissions:
@@ -11,12 +11,23 @@ permissions:
 jobs:
   # --- Core: C++20 library + CLI + unit tests (no Qt required) ---
   core:
-    name: Core (${{ matrix.os }})
+    name: Core (${{ matrix.compiler }}, ${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022]
+        include:
+          - os: ubuntu-24.04
+            compiler: GCC
+            cxx: g++
+          - os: ubuntu-24.04
+            compiler: Clang
+            cxx: clang++
+          - os: windows-2022
+            compiler: MSVC
+            cxx: cl
     runs-on: ${{ matrix.os }}
+    env:
+      CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
 
@@ -31,7 +42,7 @@ jobs:
       - name: Build Release
         run: cmake --build build-release --config Release --parallel 2
 
-      - name: Test Debug (24 unit tests, AERO_REQUIRE active)
+      - name: Test Debug (AERO_REQUIRE active)
         run: ctest --test-dir build-debug   -C Debug   --no-tests=error --output-on-failure
 
       - name: Test Release (verify AERO_REQUIRE is not disabled by NDEBUG)
@@ -52,7 +63,6 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.5.*'
-          modules: 'qtquick3d'
           cache: true
 
       - name: Install Linux GL + Xvfb deps
@@ -74,11 +84,16 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel 2
 
-      - name: Test Core (Release)
-        run: ctest --test-dir build -C Release -R '^simulator_tests$' --no-tests=error --output-on-failure
+      - name: Test desktop and core suites (Release)
+        run: ctest --test-dir build -C Release --no-tests=error --output-on-failure
 
-      - name: Test Qt integration (Release)
-        run: ctest --test-dir build -C Release -R '^simulator_tests_integration$' --no-tests=error --output-on-failure
+      - name: Configure and build desktop (Debug)
+        run: |
+          cmake -S . -B build-desktop-debug -DAERORADAR_BUILD_DESKTOP=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-desktop-debug --config Debug --parallel 2
+
+      - name: Test desktop and core suites (Debug)
+        run: ctest --test-dir build-desktop-debug -C Debug --no-tests=error --output-on-failure
 
       - name: Linux smoke test and rendered dashboard
         if: runner.os == 'Linux'

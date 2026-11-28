@@ -2,7 +2,7 @@ name: AeroRadar Source Hygiene
 
 on:
   push:
-    branches: [main, develop, 'feature/**', 'quality/**']
+    branches: [main, develop, 'feature/**', 'quality/**', 'engineering/**']
   pull_request:
 
 permissions:
