@@ -41,7 +41,7 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 | P1-14 | Flight simulation workspace | PPI and instrument telemetry with interactive playback and selection | Implemented | P1 | Main.qml, SimulationControls.qml, FlightInstruments.qml | controlsAndWorkspaces | Local P1 | Configurable scenarios and time scale | Integrate P2 controls |
 | P1-15 | Radar PPI workspace | Dedicated radar workspace with model-backed PPI | Verified | P1 | Main.qml, RadarPpi.qml | controlsAndWorkspaces and rendered captures | Local P1 | — | Keep navigation coverage while extending P3 |
 | P1-16 | Air traffic visualization workspace | Dedicated air traffic workspace displays track selection, local coordinates and instruments | Verified | P1 | Main.qml, TrackList.qml, FlightInstruments.qml | controlsAndWorkspaces | Local P1 | — | Extend traffic data as P6 providers become available |
-| P1-17 | Scenario management workspace | — | Missing | P1 | — | — | — | Scenario management workspace | Implement scenario management workspace with acceptance tests |
+| P1-17 | Scenario management workspace | Scenarios workspace opens v1 synthetic JSON, shows errors and restores the built-in scenario | Partial | P1 | ScenarioWorkspace.qml, SimulatorModel.cpp | Dashboard interaction and scenario model regressions | Local P2 scenarios | Editing, library and export | Build an editor and scenario library using the versioned contract |
 | P1-18 | Replay workspace | — | Missing | P1 | — | — | — | Replay workspace | Implement replay workspace with acceptance tests |
 | P1-19 | Research workspace | — | Missing | P1 | — | — | — | Research workspace | Implement research workspace with acceptance tests |
 | P1-20 | System settings workspace | Persistent light/dark selector in the settings workspace | Partial | P1 | AppearanceSettings.qml, AeroTheme.qml | appearancePersistsAcrossWindows | Local P1 | Display units and localization settings | Add P3 and P8 preferences |
@@ -58,9 +58,9 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 | P2-04 | Configurable time scale | QML speed selector changes wall pacing across 0.25×, 0.5×, 1×, 2× and 4× | Verified | P2 | SimulatorModel.cpp, SimulationControls.qml | timeScaleRejectsInvalidRatesAndPreservesState, controlsAndWorkspaces | Local P2 | — | Retain speed selection regressions |
 | P2-05 | Pause / resume / reset | Core transitions and desktop controls preserve pause state across reset | Verified | P2 | Simulator.cpp, SimulatorModel.cpp, SimulationControls.qml | Model and dashboard integration suites | Local P2 | — | Retain control regressions |
 | P2-06 | Step-by-step simulation | Manual step advances one tick while paused and records trail and selection data | Verified | P2 | Simulator.cpp, SimulatorModel.cpp, SimulationControls.qml | manual_step_rejects_invalid_duration, manualStepKeepsPauseAndFixedDelta, controlsAndWorkspaces | Local P2 | — | Exercise manual stepping with imported scenarios |
-| P2-07 | Scenario loading | — | Missing | P2 | — | — | — | Scenario loading | Implement scenario loading with acceptance tests |
+| P2-07 | Scenario loading | Open local v1 synthetic JSON and initialize the paused simulation from validated records | Verified | P2 | ScenarioLoader.cpp, ScenarioWorkspace.qml, SimulatorModel.cpp | loadsScenarioAndResetsItsOwnInitialState, controlsAndWorkspaces | Local P2 scenarios | — | Retain load and rollback regression coverage |
 | P2-08 | Scenario editing | — | Missing | P2 | — | — | — | Scenario editing | Implement scenario editing with acceptance tests |
-| P2-09 | Scenario validation | Initial aircraft-state validation | Partial | P2 | Simulator.cpp | constructor_rejects_invalid_aircraft | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
+| P2-09 | Scenario validation | Validates file size, schema fields, version, source, track count, identifiers and finite physical bounds | Verified | P2 | ScenarioLoader.cpp, Simulator.cpp | rejectsInvalidScenario, rejectsRemoteScenarioUrl | Local P2 scenarios | — | Extend validation for future scenario versions |
 | P2-10 | Synthetic aircraft generation | Three fixed civilian synthetic aircraft supplied by the core built-in scenario | Partial | P2 | BuiltinScenario.cpp | builtin_is_repeatable_with_manual_steps | Local P2 | Seeded generation and scenario-defined traffic | Add seeded generation under a versioned scenario contract |
 | P2-11 | Civil flight paths | Straight-line local planar paths | Partial | P2 | Simulator.cpp | step_position | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 | P2-12 | Configurable waypoints | — | Missing | P2 | — | — | — | Configurable waypoints | Implement configurable waypoints with acceptance tests |
@@ -117,12 +117,12 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 | Feature ID | Requirement | Implementation | Status | Priority | Source Files | Tests | Evidence | Remaining Gap | Next Action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | P5-01 | Scenario editor | — | Missing | P5 | — | — | — | Scenario editor | Implement scenario editor with acceptance tests |
-| P5-02 | Scenario templates | — | Missing | P5 | — | — | — | Scenario templates | Implement scenario templates with acceptance tests |
+| P5-02 | Scenario templates | One documented two-aircraft scenario example with schema | Partial | P5 | docs/scenarios/ | Example validation and model load | Local P2 scenarios | Library of templates | Add waypoint and altitude templates once supported |
 | P5-03 | Scenario library | — | Missing | P5 | — | — | — | Scenario library | Implement scenario library with acceptance tests |
-| P5-04 | Scenario save/load | — | Missing | P5 | — | — | — | Scenario save/load | Implement scenario save/load with acceptance tests |
-| P5-05 | Scenario import/export | — | Missing | P5 | — | — | — | Scenario import/export | Implement scenario import/export with acceptance tests |
-| P5-06 | Versioned scenario format and migrations | — | Missing | P5 | — | — | — | Versioned scenario format and migrations | Implement versioned scenario format and migrations with acceptance tests |
-| P5-07 | JSON Schema validation | — | Missing | P5 | — | — | — | JSON Schema validation | Implement json schema validation with acceptance tests |
+| P5-04 | Scenario save/load | Loads versioned local files; saving remains open | Partial | P5 | ScenarioLoader.cpp, ScenarioWorkspace.qml | loadsScenarioAndResetsItsOwnInitialState | Local P2 scenarios | Save and round trip | Implement atomic save after adding a scenario editor |
+| P5-05 | Scenario import/export | Local v1 JSON import | Partial | P5 | ScenarioLoader.cpp, ScenarioWorkspace.qml | Scenario model cases | Local P2 scenarios | Export | Implement validated and atomic export |
+| P5-06 | Versioned scenario format and migrations | v1 schema and version gate | Partial | P5 | docs/scenarios/, ScenarioLoader.cpp | Scenario model cases and schema check | Local P2 scenarios | Version migration once v2 exists | Design migration fixtures with v2 |
+| P5-07 | JSON Schema validation | Draft 2020-12 schema and native typed checks for v1 | Partial | P5 | docs/scenarios/scenario-v1.schema.json, ScenarioLoader.cpp | Draft schema and example validated; model rejects invalid records | Local P2 scenarios | Shared schema validation in CI and future-version fixtures | Add a schema consistency gate |
 | P5-08 | Simulation recording | — | Missing | P5 | — | — | — | Simulation recording | Implement simulation recording with acceptance tests |
 | P5-09 | Timeline navigation | — | Missing | P5 | — | — | — | Timeline navigation | Implement timeline navigation with acceptance tests |
 | P5-10 | Replay controls | — | Missing | P5 | — | — | — | Replay controls | Implement replay controls with acceptance tests |
@@ -180,7 +180,7 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 
 | Feature ID | Requirement | Implementation | Status | Priority | Source Files | Tests | Evidence | Remaining Gap | Next Action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P9-01 | Secure file handling | Screenshot output path required; general import/export absent | Partial | P9 | apps/desktop/main.cpp | — | — | Full acceptance coverage | Exercise remaining stage acceptance criteria |
+| P9-01 | Secure file handling | Local regular scenario import with bounded read and plain-text presentation | Partial | P9 | ScenarioLoader.cpp, ui/qml/ | Scenario model and dashboard tests | Local P2 scenarios | Atomic output and broader file handling | Implement and test safe save/export |
 | P9-02 | Input validation | Core and screenshot arguments validated | Partial | P9 | Simulator.cpp, apps/desktop/main.cpp | Core regressions | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 | P9-03 | Dependency auditing | Manual inventory and license review | Partial | P9 | THIRD_PARTY_ADOPTION_MATRIX.md | — | — | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 | P9-04 | Secure configuration storage | — | Missing | P9 | — | — | — | Secure configuration storage | Implement secure configuration storage with acceptance tests |
@@ -207,7 +207,7 @@ The matrix describes the working branch. Paths shortened to file basenames refer
 | P10-05 | Qt model tests | QObject adapter properties and slots checked; no QML interaction coverage | Partial | P10 | tests/integration/SimulatorModelTests.cpp | simulator_tests_integration | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 | P10-06 | UI smoke tests | Offscreen app startup available through CTest | Implemented | P10 | apps/desktop/main.cpp, CMakeLists.txt | aeroradar_desktop_smoke | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
 | P10-07 | Screenshot tests | CI captures two rendered sizes and checks non-empty files | Partial | P10 | .github/workflows/ci.yml | Linux screenshot step | Baseline CI | Full acceptance coverage | Exercise remaining stage acceptance criteria |
-| P10-08 | Scenario validation tests | Core aircraft validation only | Partial | P10 | tests/unit/SimulatorTests.cpp | constructor_rejects_invalid_aircraft | Local P0 | Full acceptance coverage | Exercise remaining stage acceptance criteria |
+| P10-08 | Scenario validation tests | Invalid, oversized, duplicate, wrong-source, wrong-version and invalid-field fixtures | Partial | P10 | SimulatorModelTests.cpp, docs/scenarios/ | Scenario model cases | Local P2 scenarios | Validations for future versions | Add cases when extending the schema |
 | P10-09 | Replay determinism tests | — | Missing | P10 | — | — | — | Replay determinism tests | Implement replay determinism tests with acceptance tests |
 | P10-10 | Performance benchmarks | — | Missing | P10 | — | — | — | Performance benchmarks | Implement performance benchmarks with acceptance tests |
 | P10-11 | Memory tests | — | Missing | P10 | — | — | — | Memory tests | Implement memory tests with acceptance tests |
