@@ -7,7 +7,7 @@ import AeroRadar
 // PAUSE / RESET buttons, active track list and synthetic-data disclaimer.
 Rectangle {
     id: ctrlPanel
-    color: "#07101e"
+    color: AeroTheme.bgPanel
     border.color: AeroTheme.borderDim
     border.width: 1
 
@@ -49,13 +49,16 @@ Rectangle {
             Layout.fillWidth: true; spacing: 6
             Repeater {
                 model: [
-                    {lbl:"PLAY",  sub:"Resume simulation", col:"#00CFFF"},
-                    {lbl:"PAUSE", sub:"Freeze simulation",  col:"#f0b040"},
-                    {lbl:"RESET", sub:"Restore to T=0",     col:"#5a7890"}
+                    {lbl:"PLAY",  sub:"Resume simulation"},
+                    {lbl:"PAUSE", sub:"Freeze simulation"},
+                    {lbl:"RESET", sub:"Restore to T=0"}
                 ]
                 delegate: Button {
                     id: playback
                     required property var modelData
+                    readonly property color actionColor: modelData.lbl === "PLAY"
+                        ? AeroTheme.accentBlue : modelData.lbl === "PAUSE"
+                        ? AeroTheme.accentAmber : AeroTheme.textDim
                     objectName: "simulation-" + modelData.lbl.toLowerCase()
                     Layout.fillWidth: true
                     implicitHeight: 44
@@ -73,8 +76,8 @@ Rectangle {
 
                     background: Rectangle {
                         radius: 3
-                        color: playback.hovered ? "#14334f" : "#0d1e30"
-                        border.color: playback.activeFocus ? AeroTheme.textPrime : playback.modelData.col
+                        color: playback.hovered ? AeroTheme.bgRaised : AeroTheme.bgCard
+                        border.color: playback.activeFocus ? AeroTheme.textPrime : playback.actionColor
                         border.width: playback.activeFocus ? 2 : 1
                     }
                     contentItem: ColumnLayout {
@@ -83,7 +86,7 @@ Rectangle {
                             text: playback.text
                             font.pixelSize: 11
                             font.bold: true
-                            color: playback.modelData.col
+                            color: playback.actionColor
                             font.family: AeroTheme.monoFont
                             Layout.alignment: Qt.AlignHCenter
                         }
@@ -116,7 +119,7 @@ Rectangle {
         // Synthetic-data disclaimer
         Rectangle {
             Layout.fillWidth: true; height: 50; radius: 3
-            color: "#1a1000"; border.color: AeroTheme.accentAmber; border.width: 1
+            color: AeroTheme.warningBg; border.color: AeroTheme.accentAmber; border.width: 1
             Text {
                 anchors.centerIn: parent
                 text: "DATA: SYNTHETIC\nNot for navigation"

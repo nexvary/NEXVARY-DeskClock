@@ -27,7 +27,7 @@ ColumnLayout {
 
             background: Rectangle {
                 radius: 3
-                color: trackButton.track.selected || trackButton.hovered ? "#0a2038" : AeroTheme.bgCard
+                color: trackButton.track.selected || trackButton.hovered ? AeroTheme.bgRaised : AeroTheme.bgCard
                 border.color: trackButton.activeFocus ? AeroTheme.textPrime
                     : trackButton.track.selected ? AeroTheme.accentBlue : AeroTheme.borderDim
                 border.width: trackButton.activeFocus ? 2 : 1

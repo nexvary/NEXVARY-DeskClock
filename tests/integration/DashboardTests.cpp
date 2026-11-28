@@ -5,7 +5,9 @@
 #include <QQmlError>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSettings>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 namespace {
@@ -27,6 +29,13 @@ class DashboardTests : public QObject {
     Q_OBJECT
 
 private slots:
+    void initTestCase() {
+        QVERIFY(settingsDirectory_.isValid());
+        QCoreApplication::setOrganizationName(QStringLiteral("NEXVARY Test"));
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory_.path());
+    }
+
     void controlsAndWorkspaces() {
         SimulatorModel simulator;
         QQmlApplicationEngine engine;
@@ -81,6 +90,47 @@ private slots:
         QVERIFY(window->property("utcWallClock").toString().endsWith(QStringLiteral(" UTC")));
         QCOMPARE(warnings.size(), 0);
     }
+
+    void appearancePersistsAcrossWindows() {
+        SimulatorModel simulator;
+        QColor dark;
+        QColor light;
+        {
+            QQmlApplicationEngine engine;
+            engine.rootContext()->setContextProperty("aeroSimulatorModel", &simulator);
+            engine.loadFromModule("AeroRadar", "Main");
+            QCOMPARE(engine.rootObjects().size(), 1);
+            auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().front());
+            QVERIFY(window);
+            QVERIFY(QTest::qWaitForWindowExposed(window));
+            dark = window->color();
+
+            auto* settings = findItem(window->contentItem(), QStringLiteral("workspace-settings"));
+            QVERIFY(settings);
+            settings->forceActiveFocus();
+            QTest::keyClick(window, Qt::Key_Space);
+            QCOMPARE(window->property("workspace").toString(), QStringLiteral("settings"));
+            auto* appearance = findItem(window->contentItem(), QStringLiteral("appearance-light"));
+            QVERIFY(appearance);
+            QVERIFY(!appearance->property("checked").toBool());
+            appearance->forceActiveFocus();
+            QTest::keyClick(window, Qt::Key_Space);
+            QVERIFY(appearance->property("checked").toBool());
+            light = window->color();
+            QVERIFY(light.lightness() > dark.lightness());
+        }
+
+        QQmlApplicationEngine engine;
+        engine.rootContext()->setContextProperty("aeroSimulatorModel", &simulator);
+        engine.loadFromModule("AeroRadar", "Main");
+        QCOMPARE(engine.rootObjects().size(), 1);
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().front());
+        QVERIFY(window);
+        QCOMPARE(window->color(), light);
+    }
+
+private:
+    QTemporaryDir settingsDirectory_;
 };
 
 QTEST_MAIN(DashboardTests)

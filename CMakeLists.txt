@@ -55,6 +55,7 @@ if(AERORADAR_BUILD_DESKTOP)
     set(aeroradar_qml_files
         ui/qml/Main.qml
         ui/qml/AeroTheme.qml
+        ui/qml/AppearanceSettings.qml
         ui/qml/RadarPpi.qml
         ui/qml/StatusStrip.qml
         ui/qml/FlightInstruments.qml

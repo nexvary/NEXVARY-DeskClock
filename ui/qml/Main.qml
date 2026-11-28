@@ -10,6 +10,7 @@ ApplicationWindow {
     height: 900
     minimumWidth: 1200
     minimumHeight: 760
+    objectName: "aeroradar-window"
     title: qsTr("NEXVARY AeroRadar — Civil Aviation Research Lab")
     color: AeroTheme.bgDeep
 
@@ -56,6 +57,7 @@ ApplicationWindow {
                         {key: "radar", label: qsTr("Radar PPI")},
                         {key: "traffic", label: qsTr("Air traffic")},
                         {key: "diagnostics", label: qsTr("Diagnostics")},
+                        {key: "settings", label: qsTr("Settings")},
                         {key: "help", label: qsTr("Help")}
                     ]
                     delegate: Button {
@@ -71,7 +73,7 @@ ApplicationWindow {
                         background: Rectangle {
                             radius: 3
                             color: workspaceButton.selected || workspaceButton.hovered
-                                ? "#0a2038" : AeroTheme.bgPanel
+                                ? AeroTheme.bgRaised : AeroTheme.bgPanel
                             border.width: workspaceButton.activeFocus ? 2 : 1
                             border.color: workspaceButton.activeFocus ? AeroTheme.textPrime
                                 : workspaceButton.selected ? AeroTheme.accentBlue : "transparent"
@@ -155,6 +157,12 @@ ApplicationWindow {
                     qsTr("The radar shows local distances in kilometers. Altitude is measured in meters above the simulation reference plane, and heading is measured clockwise from north."),
                     qsTr("Synthetic data for research and education only. Do not use for navigation or air traffic control.")
                 ]
+            }
+
+            AppearanceSettings {
+                visible: root.workspace === "settings"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
             }
 
             FlightInstruments {
