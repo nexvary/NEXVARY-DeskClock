@@ -79,7 +79,7 @@ Rectangle {
                 ctx.lineWidth   = (i === 4) ? 1.5 : 0.8;
                 ctx.stroke();
                 ctx.fillStyle = "#2a5a70";
-                ctx.font      = "9px Consolas,monospace";
+                ctx.font      = "9px monospace";
                 ctx.textAlign = "left";
                 ctx.fillText((ppi.rangeKm * i / 4).toFixed(0) + " km",
                              cx + 4, cy - rr + 10);
@@ -97,7 +97,7 @@ Rectangle {
                 ctx.lineWidth   = (b % 90 === 0) ? 1 : 0.5;
                 ctx.stroke();
                 ctx.fillStyle = "#2a5070";
-                ctx.font      = "9px Consolas,monospace";
+                ctx.font      = "9px monospace";
                 ctx.textAlign = "center";
                 ctx.fillText(b + "°",
                              cx + Math.cos(rad) * (R + 14),
@@ -152,7 +152,7 @@ Rectangle {
                 // Icon (UAS = cross-in-square; fixed-wing = aircraft silhouette)
                 ctx.save();
                 ctx.translate(px, py);
-                ctx.rotate((t.heading_deg - 90) * Math.PI / 180);
+                ctx.rotate(t.heading_deg * Math.PI / 180);
                 ctx.strokeStyle = bc;
                 ctx.lineWidth   = t.selected ? 2.5 : 1.5;
                 if (t.type === "UAS") {
@@ -192,10 +192,10 @@ Rectangle {
                 lx = px + (t.selected ? 14 : 10);
                 ly = py + (t.selected ? -46 : -10);
                 ctx.fillStyle = bc;
-                ctx.font      = "bold 11px Consolas,monospace";
+                ctx.font      = "bold 11px monospace";
                 ctx.fillText(t.label, lx, ly);
                 ctx.fillStyle = "#80b0c8";
-                ctx.font      = "9px Consolas,monospace";
+                ctx.font      = "9px monospace";
                 ctx.fillText(t.range_km.toFixed(1)   + " km",          lx, ly + 13);
                 ctx.fillText(t.altitude_m.toFixed(0)  + " m",          lx, ly + 24);
                 ctx.fillText(t.speed_kt.toFixed(0)    + " kt  " +

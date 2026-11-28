@@ -2,6 +2,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQmlError>
 #include <QQuickWindow>
 #include <QString>
 #include <QTimer>
@@ -42,10 +43,12 @@ int main(int argc, char* argv[]) {
 
     SimulatorModel simulatorModel;
 
+    bool qmlObjectFailed = false;
+    bool qmlWarning = false;
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("aeroSimulatorModel", &simulatorModel);
-
-    bool qmlObjectFailed = false;
+    QObject::connect(&engine, &QQmlApplicationEngine::warnings,
+                     &app, [&qmlWarning](const QList<QQmlError>&) { qmlWarning = true; });
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
                      &app, [&qmlObjectFailed]() { qmlObjectFailed = true; },
                      Qt::DirectConnection);
@@ -58,9 +61,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (smokeMode) {
-        QTimer::singleShot(1500, &app, [&app, &qmlObjectFailed]() {
-            if (qmlObjectFailed) {
-                qCritical("SMOKE FAIL: QML object creation error detected");
+        QTimer::singleShot(1500, &app, [&app, &qmlObjectFailed, &qmlWarning]() {
+            if (qmlObjectFailed || qmlWarning) {
+                qCritical("SMOKE FAIL: QML reported a startup error or warning");
                 app.exit(1);
             } else {
                 qDebug("SMOKE PASS: QML loaded and running cleanly");

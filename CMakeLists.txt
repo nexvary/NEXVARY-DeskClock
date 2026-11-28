@@ -98,6 +98,7 @@ if(AERORADAR_BUILD_DESKTOP)
         add_test(NAME aeroradar_desktop_smoke COMMAND aeroradar_desktop --smoke)
         set_tests_properties(aeroradar_desktop_smoke PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+            FAIL_REGULAR_EXPRESSION "Context2D: The font families specified are invalid"
             TIMEOUT 30)
     endif()
 endif()
