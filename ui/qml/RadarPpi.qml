@@ -69,6 +69,8 @@ Rectangle {
         }
         Button {
             objectName: "radar-zoom-in"
+            Layout.preferredWidth: 42
+            Layout.preferredHeight: 30
             text: "+"
             Accessible.name: qsTr("Zoom in")
             enabled: ppi.rangeIndex > 0
@@ -76,6 +78,8 @@ Rectangle {
         }
         Button {
             objectName: "radar-zoom-out"
+            Layout.preferredWidth: 42
+            Layout.preferredHeight: 30
             text: "−"
             Accessible.name: qsTr("Zoom out")
             enabled: ppi.rangeIndex < ppi.rangesKm.length - 1
@@ -83,6 +87,8 @@ Rectangle {
         }
         Button {
             objectName: "radar-reset-view"
+            Layout.preferredWidth: 74
+            Layout.preferredHeight: 30
             text: qsTr("Center")
             Accessible.description: qsTr("Restore the original center and range")
             onClicked: ppi.resetView()
@@ -338,7 +344,7 @@ Rectangle {
         id: ppiLegend
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         anchors { bottomMargin: 6; leftMargin: 12 }
-        height: 32
+        height: 40
         spacing: 10
 
         CheckBox {

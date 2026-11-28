@@ -14,6 +14,8 @@ ApplicationWindow {
     title: qsTr("NEXVARY AeroRadar — Civil Aviation Research Lab")
     color: AeroTheme.bgDeep
     palette.window: AeroTheme.bgPanel
+    palette.windowText: AeroTheme.textPrime
+    palette.dark: AeroTheme.textDim
     palette.base: AeroTheme.bgCard
     palette.button: AeroTheme.bgRaised
     palette.buttonText: AeroTheme.textPrime
