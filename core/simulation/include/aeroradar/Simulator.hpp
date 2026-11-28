@@ -1,5 +1,5 @@
 #pragma once
-#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -15,15 +15,16 @@ struct Aircraft {
     double       vy_km_s{};     // velocity north, km/s
     double       altitude_m{};  // altitude above reference plane, m
     AircraftType type{ AircraftType::FIXED_WING };
-    std::string  label;
+    std::string  label{};
 };
 
 class Simulator {
 public:
+    // Aircraft IDs must be unique; state and displayed quantities must be finite.
     explicit Simulator(std::vector<Aircraft> aircraft);
 
-    // Advance simulation by dt seconds. Throws std::invalid_argument on bad input.
-    // Does nothing (no throw) when paused.
+    // Does nothing when paused. Otherwise rejects invalid duration or overflow
+    // without changing aircraft, elapsed time or step count.
     void step(double seconds);
 
     // Control — idempotent; never throw
@@ -33,7 +34,7 @@ public:
 
     [[nodiscard]] bool   is_paused()       const noexcept;
     [[nodiscard]] double elapsed_seconds() const noexcept;
-    [[nodiscard]] int    step_count()      const noexcept;
+    [[nodiscard]] std::uint64_t step_count() const noexcept;
 
     [[nodiscard]] const std::vector<Aircraft>& aircraft() const noexcept;
 
@@ -42,7 +43,7 @@ private:
     std::vector<Aircraft> aircraft_;
     bool   paused_{ false };
     double elapsed_{ 0.0 };
-    int    steps_{ 0 };
+    std::uint64_t steps_{ 0 };
 };
 
 // Pure derived quantities — do not mutate

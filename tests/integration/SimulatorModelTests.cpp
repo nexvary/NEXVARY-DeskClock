@@ -26,11 +26,18 @@ private slots:
     // --- Pause / Resume ---
 
     void pauseStopsSimulation() {
+        QTRY_VERIFY(model_->simTimeSeconds() > 0.0);
         model_->pause();
         QVERIFY(model_->isPaused());
-        double t0 = model_->simTimeSeconds();
-        QTest::qWait(300);
-        QCOMPARE(model_->simTimeSeconds(), t0);
+        const double elapsed = model_->simTimeSeconds();
+        const auto tracks = model_->tracks();
+        QSignalSpy state(model_, &SimulatorModel::simStateChanged);
+        QSignalSpy selection(model_, &SimulatorModel::selectedChanged);
+        QTest::qWait(350);
+        QCOMPARE(model_->simTimeSeconds(), elapsed);
+        QCOMPARE(model_->tracks(), tracks);
+        QCOMPARE(state.count(), 0);
+        QCOMPARE(selection.count(), 0);
     }
 
     void resumeRestoresSimulation() {
@@ -38,9 +45,7 @@ private slots:
         QVERIFY(model_->isPaused());
         model_->play();
         QVERIFY(!model_->isPaused());
-        // Let it tick at least once
-        QTest::qWait(250);
-        QVERIFY(model_->simTimeSeconds() > 0.0);
+        QTRY_VERIFY(model_->simTimeSeconds() > 0.0);
     }
 
     void pauseIdempotent() {
@@ -54,17 +59,17 @@ private slots:
 
     void resumeIdempotent() {
         QVERIFY(!model_->isPaused());
-        model_->play();   // already running — must not corrupt
+        QSignalSpy state(model_, &SimulatorModel::simStateChanged);
+        model_->play();
         QVERIFY(!model_->isPaused());
-        QTest::qWait(150);
-        QVERIFY(model_->simTimeSeconds() >= 0.0);
+        QCOMPARE(state.count(), 0);
+        QTRY_VERIFY(model_->simTimeSeconds() > 0.0);
     }
 
     // --- Reset ---
 
     void resetRestoresTime() {
-        QTest::qWait(250);   // let sim advance at least one tick
-        QVERIFY(model_->simTimeSeconds() > 0.0);
+        QTRY_VERIFY(model_->simTimeSeconds() > 0.0);
         model_->reset();
         QCOMPARE(model_->simTimeSeconds(), 0.0);
     }
@@ -79,8 +84,7 @@ private slots:
         QVERIFY(!model_->isPaused());
         model_->reset();
         QVERIFY(!model_->isPaused());
-        QTest::qWait(150);
-        QVERIFY(model_->simTimeSeconds() > 0.0);
+        QTRY_VERIFY(model_->simTimeSeconds() > 0.0);
     }
 
     // --- Track selection ---
@@ -129,17 +133,23 @@ private slots:
     void selectTrackEmitsSelectedChanged() {
         const auto tracks = model_->tracks();
         QVERIFY(!tracks.isEmpty());
-        int firstId = tracks.first().toMap().value("id").toInt();
+        const int id = tracks.last().toMap().value("id").toInt();
         QSignalSpy spy(model_, &SimulatorModel::selectedChanged);
-        model_->selectTrack(firstId);
+        model_->selectTrack(id);
+        model_->selectTrack(id);
         QCOMPARE(spy.count(), 1);
     }
 
     void timerTickEmitsSimStateChanged() {
         QSignalSpy spy(model_, &SimulatorModel::simStateChanged);
-        // 100 ms tick rate — wait 350 ms to expect at least 2 ticks
-        QTest::qWait(350);
-        QVERIFY(spy.count() >= 2);
+        QTRY_VERIFY(spy.count() >= 2);
+    }
+
+    void clockDisplayUsesFixedTicks() {
+        QCOMPARE(model_->simTimeDisplay(), QStringLiteral("00:00:00"));
+        QTRY_COMPARE(model_->simTimeDisplay(), QStringLiteral("00:00:01"));
+        model_->reset();
+        QCOMPARE(model_->simTimeDisplay(), QStringLiteral("00:00:00"));
     }
 
 private:

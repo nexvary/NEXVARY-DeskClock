@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 # Project renamed from NexvaryDeskClock to NexvaryAeroRadar to match product identity.
-project(NexvaryAeroRadar VERSION 0.1.0 LANGUAGES CXX)
+project(NexvaryAeroRadar VERSION 0.1.0 DESCRIPTION "NEXVARY AeroRadar" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,6 +45,7 @@ if(AERORADAR_BUILD_DESKTOP)
         apps/desktop/SimulatorModel.cpp
     )
     target_include_directories(aeroradar_desktop PRIVATE apps/desktop)
+    target_compile_definitions(aeroradar_desktop PRIVATE AERORADAR_VERSION="${PROJECT_VERSION}")
 
     # AeroTheme.qml is a pragma Singleton; mark it so qt_add_qml_module
     # emits the correct qmldir singleton entry automatically.
@@ -89,10 +90,15 @@ if(AERORADAR_BUILD_DESKTOP)
             Qt6::Test
             aeroradar_core)
 
-        # Name matches the existing ctest -R simulator_tests filter in ci.yml,
-        # so integration tests run in the desktop job without a workflow change.
         add_test(NAME simulator_tests_integration COMMAND simulator_model_tests)
         set_tests_properties(simulator_tests_integration PROPERTIES
-            ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+            TIMEOUT 30)
+
+        add_test(NAME aeroradar_desktop_smoke COMMAND aeroradar_desktop --smoke)
+        set_tests_properties(aeroradar_desktop_smoke PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+            FAIL_REGULAR_EXPRESSION "Context2D: The font families specified are invalid"
+            TIMEOUT 30)
     endif()
 endif()

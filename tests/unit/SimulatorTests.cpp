@@ -217,12 +217,52 @@ AERO_TEST(bearing_west) {
     AERO_REQUIRE_NEAR(bearing_deg(a), 270.0, 1e-9);
 }
 
+AERO_TEST(paused_step_ignores_invalid_duration) {
+    aeroradar::Simulator sim({});
+    sim.pause();
+    sim.step(std::numeric_limits<double>::quiet_NaN());
+    AERO_REQUIRE(sim.step_count() == 0);
+}
+
+AERO_TEST(constructor_rejects_invalid_aircraft) {
+    using namespace aeroradar;
+    const Aircraft valid{1, 1.0, 2.0, 0.1, 0.2, 300.0, AircraftType::FIXED_WING, "AC-01"};
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator({valid, valid}));
+
+    auto invalid = valid;
+    invalid.altitude_m = std::numeric_limits<double>::quiet_NaN();
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator({invalid}));
+    invalid = valid;
+    invalid.vx_km_s = std::numeric_limits<double>::max();
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator({invalid}));
+    invalid = valid;
+    invalid.type = static_cast<AircraftType>(-1);
+    AERO_REQUIRE_THROWS(std::invalid_argument, Simulator({invalid}));
+}
+
+AERO_TEST(step_rejects_elapsed_overflow_atomically) {
+    aeroradar::Simulator sim({});
+    const auto max = std::numeric_limits<double>::max();
+    sim.step(max);
+    AERO_REQUIRE_THROWS(std::overflow_error, sim.step(max));
+    AERO_REQUIRE(sim.elapsed_seconds() == max);
+    AERO_REQUIRE(sim.step_count() == 1);
+}
+
+AERO_TEST(step_rejects_range_overflow_atomically) {
+    using namespace aeroradar;
+    Simulator sim({
+        {1, 1.0, 2.0, 1e-307, 0.0, 100.0},
+        {2, 0.0, 0.0, 0.75, 0.75, 100.0},
+    });
+    AERO_REQUIRE_THROWS(std::overflow_error, sim.step(std::numeric_limits<double>::max()));
+    AERO_REQUIRE(sim.aircraft()[0].x_km == 1.0);
+    AERO_REQUIRE(sim.aircraft()[1].x_km == 0.0);
+    AERO_REQUIRE(sim.elapsed_seconds() == 0.0);
+    AERO_REQUIRE(sim.step_count() == 0);
+}
+
 int main() {
-    // AERO_TEST blocks run via static initialisers before main().
-    // If any failed, std::exit(1) was already called.
-    // 24 tests: range(2) step(3) elapsed(1) invalid_dt(3)
-    //           pause/resume/reset(4) p1-state-hardening(5) multi(1)
-    //           bearing(4) speed(2) = 24
-    std::fprintf(stdout, "\nAll 24 simulator tests passed.\n");
+    // Test cases run before main and emit their own result.
     return 0;
 }
