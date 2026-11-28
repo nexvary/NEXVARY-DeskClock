@@ -6,7 +6,7 @@ import AeroRadar
 // status pill, and the multi-field status data row.
 Rectangle {
     id: strip
-    color: "#080f1c"
+    color: AeroTheme.bgPanel
     height: 90
     border.color: AeroTheme.borderDim
     border.width: 1
@@ -40,7 +40,7 @@ Rectangle {
             Rectangle {
                 height: 28; radius: 4
                 implicitWidth: warningRow.implicitWidth + 24
-                color: "#2a1800"
+                color: AeroTheme.warningBg
                 border.color: AeroTheme.accentAmber; border.width: 1
                 Row {
                     id: warningRow
@@ -60,7 +60,7 @@ Rectangle {
             Rectangle {
                 height: 28; radius: 4
                 implicitWidth: runLabel.implicitWidth + 28
-                color: strip.simulator && !strip.simulator.paused ? "#0a2a10" : "#1a1a0a"
+                color: strip.simulator && !strip.simulator.paused ? AeroTheme.runningBg : AeroTheme.warningBg
                 border.color: strip.simulator && !strip.simulator.paused
                               ? AeroTheme.accentGreen : AeroTheme.accentAmber
                 border.width: 1
@@ -102,11 +102,9 @@ Rectangle {
             Repeater {
                 model: [
                     {lbl:"TRACKS",         val: strip.simulator ? String(strip.simulator.trackCount) : "--",        unit:"(Simulated)"},
-                    {lbl:"SCENARIO",       val: "Research-01",                                                       unit:"Multi-Platform Test"},
                     {lbl:"UTC WALL CLOCK", val: strip.utcWallClock,                                                   unit:""},
                     {lbl:"ELAPSED",        val: strip.simulator ? strip.simulator.simTimeDisplay : "00:00:00",        unit:""},
-                    {lbl:"WEATHER (SIM)",  val: "Clear  18 C",                                                       unit:"Wind 12kt NW(310)"},
-                    {lbl:"ENVIRONMENT",    val: "Coastal / Mountain",                                                 unit:""},
+                    {lbl:"FLIGHT MODEL",   val: "Planar, constant velocity",                                           unit:""},
                 ]
                 delegate: RowLayout {
                     spacing: 0

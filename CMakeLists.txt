@@ -52,14 +52,19 @@ if(AERORADAR_BUILD_DESKTOP)
     set_source_files_properties(ui/qml/AeroTheme.qml
         PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
+    set(aeroradar_qml_files
+        ui/qml/Main.qml
+        ui/qml/AeroTheme.qml
+        ui/qml/AppearanceSettings.qml
+        ui/qml/RadarPpi.qml
+        ui/qml/StatusStrip.qml
+        ui/qml/FlightInstruments.qml
+        ui/qml/SimulationControls.qml
+        ui/qml/TrackList.qml
+        ui/qml/WorkspaceInfo.qml
+    )
     qt_add_qml_module(aeroradar_desktop URI AeroRadar VERSION 1.0
-        QML_FILES
-            ui/qml/Main.qml
-            ui/qml/AeroTheme.qml
-            ui/qml/RadarPpi.qml
-            ui/qml/StatusStrip.qml
-            ui/qml/FlightInstruments.qml
-            ui/qml/SimulationControls.qml
+        QML_FILES ${aeroradar_qml_files}
     )
 
     target_link_libraries(aeroradar_desktop PRIVATE
@@ -89,6 +94,27 @@ if(AERORADAR_BUILD_DESKTOP)
             Qt6::QuickControls2
             Qt6::Test
             aeroradar_core)
+
+        qt_add_executable(dashboard_tests
+            tests/integration/DashboardTests.cpp
+            apps/desktop/SimulatorModel.cpp
+        )
+        target_include_directories(dashboard_tests PRIVATE apps/desktop)
+        target_link_libraries(dashboard_tests PRIVATE Qt6::Quick Qt6::Test aeroradar_core)
+        qt_add_resources(dashboard_tests dashboard_qml
+            PREFIX "/qt/qml/AeroRadar"
+            BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+            FILES ${aeroradar_qml_files}
+        )
+        qt_add_resources(dashboard_tests dashboard_qmldir
+            PREFIX "/qt/qml/AeroRadar"
+            BASE "${CMAKE_CURRENT_BINARY_DIR}/AeroRadar"
+            FILES "${CMAKE_CURRENT_BINARY_DIR}/AeroRadar/qmldir"
+        )
+        add_test(NAME aeroradar_dashboard_tests COMMAND dashboard_tests)
+        set_tests_properties(aeroradar_dashboard_tests PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+            TIMEOUT 30)
 
         add_test(NAME simulator_tests_integration COMMAND simulator_model_tests)
         set_tests_properties(simulator_tests_integration PROPERTIES
