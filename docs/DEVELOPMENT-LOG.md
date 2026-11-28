@@ -80,6 +80,16 @@ Debian 13 with GCC 14.2.0 and Qt 6.5.3 passed 4/4 CTest entries in Debug and Rel
 
 The published Qt Quick 3D terms are commercial or GPLv3. The repository currently reserves all rights, so product adoption remains blocked pending an approved compatible licensing route. JSBSim remains an evaluation candidate based on active native C++ upstream maintenance, and BlueSky remains reference-only. No new bundled dependency was introduced. [Adoption matrix](THIRD_PARTY_ADOPTION_MATRIX.md)
 
+### Hosted radar and waypoint evidence
+
+The radar PR head `52cdcf8f54f0ef25079cb7247d44f5b34cc5efca` and waypoint code head `575405cc6ce4721bb7707d552237fd49de3857c0` passed their full hosted matrix. The Windows packaging workflow verified portable and installed startup and silent uninstallation while preserving unrelated files. The radar artifact archives and their installer and portable checksums were also verified locally. [Radar PR #11](https://github.com/nexvary/NEXVARY-DeskClock/pull/11) · [Radar CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46188112221) · [Waypoints PR #12](https://github.com/nexvary/NEXVARY-DeskClock/pull/12) · [Waypoint CI](https://github.com/nexvary/NEXVARY-DeskClock/actions/runs/46188588930)
+
+## 2026-11-28 — P5 scenario editor and atomic save
+
+Branch `engineering/p5-scenario-edit-save` starts at the waypoint and licensing changes. Commit `f46201e9ace11255e01d11a92571eec7242f921f` adds a draft JSON editor with separate Apply and Save operations. Apply validates before replacing the active simulation. Save validates and atomically commits a local file using QSaveFile and retains the simulation state.
+
+Local Debian 13 GCC 14.2.0 and Qt 6.5.3 passed 4/4 CTest entries in Debug and Release. The real-window test applied a changed draft. Model tests verified the rejected edit and rejected save leave active state and existing file bytes intact, invalid save destinations fail, and both scenario versions round trip. Source hygiene passed.
+
 ### Resume point
 
-Continue on `engineering/p2-waypoint-profiles` after its hosted checks. The scenario editor and atomic save/export are the next dependencies for replay and research. Use the v1/v2 contracts and keep validation shared. Seeded aircraft, weather and validated civil performance models remain open. P3 still needs persisted display preferences, measurement units, geodetic projection and dense-scenario benchmarks. P4–P11 work and release gates are tracked in the 188-item [feature parity matrix](FEATURE-PARITY.md) and [release checklist](RELEASE-CHECKLIST.md).
+Continue on `engineering/p5-scenario-edit-save` from the latest pushed commit. The next shared dependency is a bounded simulation recording format with explicit version, tick, scenario, source and reproducibility metadata, then replay and research workspaces. The P2 engine still needs seeded generation, synthetic weather and validated civil performance models. P3 still needs units, display preferences, geodetic projection and measured performance. Qt Quick 3D adoption requires a compatible license route. Upstream integration, additional P4–P11 acceptance checks and release gates remain open. See [feature parity](FEATURE-PARITY.md) and [release checklist](RELEASE-CHECKLIST.md).
