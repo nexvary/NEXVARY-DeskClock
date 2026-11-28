@@ -137,6 +137,11 @@ QString SimulatorModel::scenarioName() const { return scenarioName_; }
 
 QString SimulatorModel::scenarioError() const { return scenarioError_; }
 
+QString SimulatorModel::flightModel() const {
+    return sim_.has_routes() ? tr("Local planar motion with timed waypoints")
+                             : tr("Local planar, constant velocity");
+}
+
 void SimulatorModel::setScenarioError(QString error) {
     if (error == scenarioError_)
         return;

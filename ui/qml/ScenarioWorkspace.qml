@@ -42,7 +42,7 @@ Rectangle {
 
         Text {
             Layout.fillWidth: true
-            text: qsTr("Open a version 1 JSON scenario to start a new simulation in the paused state.")
+            text: qsTr("Open a version 1 or 2 JSON scenario to start a new simulation in the paused state.")
             color: AeroTheme.textDim
             wrapMode: Text.WordWrap
         }

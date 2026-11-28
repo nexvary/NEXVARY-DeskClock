@@ -103,7 +103,7 @@ if(AERORADAR_BUILD_DESKTOP)
         qt_add_resources(simulator_model_tests scenario_fixtures
             PREFIX "/scenarios"
             BASE "${CMAKE_CURRENT_SOURCE_DIR}"
-            FILES docs/scenarios/civil-training.json
+            FILES docs/scenarios/civil-training.json docs/scenarios/civil-waypoints.json
         )
 
         qt_add_executable(dashboard_tests

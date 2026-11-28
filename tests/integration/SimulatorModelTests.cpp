@@ -15,8 +15,8 @@
 #include <limits>
 
 namespace {
-QByteArray sampleScenario() {
-    QFile fixture(QStringLiteral(":/scenarios/docs/scenarios/civil-training.json"));
+QByteArray scenarioFixture(const char* fileName) {
+    QFile fixture(QStringLiteral(":/scenarios/docs/scenarios/") + QLatin1String(fileName));
     if (!fixture.open(QIODevice::ReadOnly))
         return {};
     return fixture.readAll();
@@ -204,7 +204,7 @@ private slots:
     void loadsScenarioAndResetsItsOwnInitialState() {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
-        const auto url = writeScenario(directory, sampleScenario());
+        const auto url = writeScenario(directory, scenarioFixture("civil-training.json"));
         QVERIFY(url.isLocalFile());
         QVERIFY(model_->loadScenario(url));
         QVERIFY(model_->scenarioError().isEmpty());
@@ -225,14 +225,28 @@ private slots:
         QVERIFY(model_->isPaused());
     }
 
+    void loadsTimedRouteAndClimbs() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto url = writeScenario(directory, scenarioFixture("civil-waypoints.json"));
+        QVERIFY(model_->loadScenario(url));
+        QCOMPARE(model_->trackCount(), 1);
+        QVERIFY(model_->flightModel().contains(QStringLiteral("waypoints")));
+        QCOMPARE(model_->selected().value("altitude_m").toDouble(), 1000.0);
+        model_->stepOnce();
+        QCOMPARE(model_->selected().value("altitude_m").toDouble(), 1010.0);
+        model_->reset();
+        QCOMPARE(model_->selected().value("altitude_m").toDouble(), 1000.0);
+    }
+
     void rejectsInvalidScenario_data() {
         QTest::addColumn<QByteArray>("contents");
         QTest::newRow("bad-json") << QByteArray("{]");
         QTest::newRow("oversized") << QByteArray(256 * 1024 + 1, ' ');
-        const auto sample = sampleScenario();
+        const auto sample = scenarioFixture("civil-training.json");
         QVERIFY(!sample.isEmpty());
         auto rejectedVersion = sample;
-        rejectedVersion.replace(R"("version": 1)", R"("version": 2)");
+        rejectedVersion.replace(R"("version": 1)", R"("version": 3)");
         QTest::newRow("future-version") << rejectedVersion;
         auto duplicate = sample;
         duplicate.replace(R"("id": 22)", R"("id": 21)");
@@ -256,6 +270,13 @@ private slots:
         }
         tooManyTracks.insert("aircraft", aircraft);
         QTest::newRow("record-limit") << QJsonDocument(tooManyTracks).toJson(QJsonDocument::Compact);
+        auto invalidRouteTime = scenarioFixture("civil-waypoints.json");
+        QVERIFY(!invalidRouteTime.isEmpty());
+        invalidRouteTime.replace(R"("time_s": 20)", R"("time_s": 1)");
+        QTest::newRow("route-time-order") << invalidRouteTime;
+        auto badRouteSpeed = scenarioFixture("civil-waypoints.json");
+        badRouteSpeed.replace(R"("x_km": 2)", R"("x_km": 300)");
+        QTest::newRow("route-speed") << badRouteSpeed;
     }
 
     void rejectsInvalidScenario() {

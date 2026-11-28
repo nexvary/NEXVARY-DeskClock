@@ -18,10 +18,23 @@ struct Aircraft {
     std::string  label{};
 };
 
+struct Waypoint {
+    double time_s{};
+    double x_km{};
+    double y_km{};
+    double altitude_m{};
+};
+
+struct AircraftRoute {
+    int aircraft_id{};
+    std::vector<Waypoint> waypoints;
+};
+
 class Simulator {
 public:
     // Aircraft IDs must be unique; state and displayed quantities must be finite.
-    explicit Simulator(std::vector<Aircraft> aircraft);
+    // Routes have increasing elapsed timestamps and interpolate from the initial position.
+    explicit Simulator(std::vector<Aircraft> aircraft, std::vector<AircraftRoute> routes = {});
 
     // Does nothing when paused. Otherwise rejects invalid duration or overflow
     // without changing aircraft, elapsed time or step count.
@@ -38,13 +51,27 @@ public:
     [[nodiscard]] double elapsed_seconds() const noexcept;
     [[nodiscard]] std::uint64_t step_count() const noexcept;
 
+    [[nodiscard]] bool has_routes() const noexcept;
     [[nodiscard]] const std::vector<Aircraft>& aircraft() const noexcept;
 
 private:
+    struct Movement {
+        double x_km;
+        double y_km;
+        double altitude_m;
+        double vx_km_s;
+        double vy_km_s;
+    };
+
+    static Movement route_movement(const Aircraft& initial, const std::vector<Waypoint>& route,
+                                   double elapsed);
+    static void apply_movement(Aircraft& aircraft, const Movement& movement) noexcept;
     void advance(double seconds);
 
     std::vector<Aircraft> initial_;
     std::vector<Aircraft> aircraft_;
+    std::vector<std::vector<Waypoint>> routes_;
+    std::vector<Movement> next_;
     bool   paused_{ false };
     double elapsed_{ 0.0 };
     std::uint64_t steps_{ 0 };

@@ -20,6 +20,7 @@ class SimulatorModel : public QObject {
     Q_PROPERTY(int     trackCount      READ trackCount     NOTIFY simStateChanged)
     Q_PROPERTY(QVariantList tracks     READ tracks         NOTIFY simStateChanged)
     Q_PROPERTY(QString scenarioName READ scenarioName NOTIFY scenarioChanged)
+    Q_PROPERTY(QString flightModel READ flightModel NOTIFY scenarioChanged)
     Q_PROPERTY(QString scenarioError READ scenarioError NOTIFY scenarioErrorChanged)
     Q_PROPERTY(double  timeScale       READ timeScale    WRITE setTimeScale NOTIFY timeScaleChanged)
     Q_PROPERTY(QVariantMap  selected   READ selected       NOTIFY selectedChanged)
@@ -40,6 +41,7 @@ public:
     [[nodiscard]] QVariantList tracks()          const;
     [[nodiscard]] QString      scenarioName() const;
     [[nodiscard]] QString      scenarioError() const;
+    [[nodiscard]] QString      flightModel() const;
     [[nodiscard]] double       timeScale() const;
     [[nodiscard]] QVariantMap  selected()        const; // currently selected track
 

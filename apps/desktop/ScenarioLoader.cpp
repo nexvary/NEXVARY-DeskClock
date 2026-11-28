@@ -19,9 +19,14 @@ namespace {
 
 constexpr qint64 maxScenarioBytes = 256 * 1024;
 constexpr qsizetype maxAircraft = 256;
+constexpr qsizetype maxWaypoints = 64;
+constexpr double maxPositionKm = 1000.0;
+constexpr double maxSpeedKmPerSecond = 2.0;
+constexpr double maxRouteTimeS = 86400.0;
 
-bool hasFields(const QJsonObject& object, std::initializer_list<const char*> names) {
-    return object.size() == static_cast<qsizetype>(names.size()) &&
+bool hasFields(const QJsonObject& object, std::initializer_list<const char*> names,
+               qsizetype additionalFields = 0) {
+    return object.size() == static_cast<qsizetype>(names.size()) + additionalFields &&
            std::ranges::all_of(names, [&object](const char* name) {
                return object.contains(QLatin1String(name));
            });
@@ -37,11 +42,21 @@ QString validatedText(const QJsonValue& value, qsizetype maximum) {
     return text;
 }
 
-std::optional<aeroradar::Aircraft> parseAircraft(const QJsonObject& object) {
+double number(const QJsonObject& object, const char* key) {
+    return object.value(QLatin1String(key)).toDouble(std::numeric_limits<double>::quiet_NaN());
+}
+
+bool validPosition(double east, double north, double altitude) {
+    return std::abs(east) <= maxPositionKm && std::abs(north) <= maxPositionKm &&
+           altitude >= -500.0 && altitude <= 30000.0;
+}
+
+std::optional<aeroradar::Aircraft> parseAircraft(const QJsonObject& object, bool hasWaypoints) {
     using aeroradar::Aircraft;
     using aeroradar::AircraftType;
 
-    if (!hasFields(object, {"id", "label", "type", "x_km", "y_km", "vx_km_s", "vy_km_s", "altitude_m"}))
+    if (!hasFields(object, {"id", "label", "type", "x_km", "y_km", "vx_km_s", "vy_km_s", "altitude_m"},
+                   hasWaypoints ? 1 : 0))
         return std::nullopt;
 
     Aircraft aircraft;
@@ -59,22 +74,47 @@ std::optional<aeroradar::Aircraft> parseAircraft(const QJsonObject& object) {
     else
         return std::nullopt;
 
-    const auto number = [&object](const char* key) {
-        return object.value(QLatin1String(key)).toDouble(std::numeric_limits<double>::quiet_NaN());
-    };
-    aircraft.x_km = number("x_km");
-    aircraft.y_km = number("y_km");
-    aircraft.vx_km_s = number("vx_km_s");
-    aircraft.vy_km_s = number("vy_km_s");
-    aircraft.altitude_m = number("altitude_m");
+    aircraft.x_km = number(object, "x_km");
+    aircraft.y_km = number(object, "y_km");
+    aircraft.vx_km_s = number(object, "vx_km_s");
+    aircraft.vy_km_s = number(object, "vy_km_s");
+    aircraft.altitude_m = number(object, "altitude_m");
 
-    // These are file-format bounds, independent of the numerical kernel's limits.
-    if (!(std::abs(aircraft.x_km) <= 1000.0 && std::abs(aircraft.y_km) <= 1000.0 &&
-          std::hypot(aircraft.vx_km_s, aircraft.vy_km_s) <= 2.0 &&
-          aircraft.altitude_m >= -500.0 && aircraft.altitude_m <= 30000.0))
+    if (!validPosition(aircraft.x_km, aircraft.y_km, aircraft.altitude_m) ||
+        !(std::hypot(aircraft.vx_km_s, aircraft.vy_km_s) <= maxSpeedKmPerSecond))
         return std::nullopt;
 
     return aircraft;
+}
+
+std::optional<aeroradar::AircraftRoute> parseRoute(const QJsonValue& input,
+                                                  const aeroradar::Aircraft& aircraft) {
+    const auto records = input.toArray();
+    if (records.isEmpty() || records.size() > maxWaypoints)
+        return std::nullopt;
+
+    aeroradar::AircraftRoute route{aircraft.id, {}};
+    route.waypoints.reserve(static_cast<std::size_t>(records.size()));
+    aeroradar::Waypoint previous{0.0, aircraft.x_km, aircraft.y_km, aircraft.altitude_m};
+    for (const auto& record : records) {
+        const auto fields = record.toObject();
+        if (!hasFields(fields, {"time_s", "x_km", "y_km", "altitude_m"}))
+            return std::nullopt;
+        const aeroradar::Waypoint point{
+            number(fields, "time_s"), number(fields, "x_km"), number(fields, "y_km"),
+            number(fields, "altitude_m")
+        };
+        if (!(point.time_s > previous.time_s && point.time_s <= maxRouteTimeS) ||
+            !validPosition(point.x_km, point.y_km, point.altitude_m))
+            return std::nullopt;
+        const auto duration = point.time_s - previous.time_s;
+        if (!(std::hypot(point.x_km - previous.x_km, point.y_km - previous.y_km) /
+              duration <= maxSpeedKmPerSecond))
+            return std::nullopt;
+        route.waypoints.push_back(point);
+        previous = point;
+    }
+    return route;
 }
 
 } // namespace
@@ -108,11 +148,12 @@ std::optional<LoadedScenario> loadScenarioFile(const QUrl& fileUrl, QString& err
     if (!document.isObject())
         return fail("The scenario must be a valid JSON object.");
     const auto root = document.object();
+    const int version = root.value("version").toInt();
     if (!hasFields(root, {"format", "version", "source", "name", "aircraft"}) ||
         root.value("format").toString() != QLatin1String("nexvary.aeroradar.scenario") ||
-        root.value("version").toInt() != 1 ||
+        (version != 1 && version != 2) ||
         root.value("source").toString() != QLatin1String("synthetic"))
-        return fail("This file does not match the version 1 synthetic scenario format.");
+        return fail("Use a supported version 1 or 2 synthetic scenario file.");
 
     const auto name = validatedText(root.value("name"), 80);
     const auto records = root.value("aircraft").toArray();
@@ -120,19 +161,28 @@ std::optional<LoadedScenario> loadScenarioFile(const QUrl& fileUrl, QString& err
         return fail("Use a scenario name and between 1 and 256 aircraft.");
 
     std::vector<aeroradar::Aircraft> aircraft;
+    std::vector<aeroradar::AircraftRoute> routes;
     aircraft.reserve(static_cast<std::size_t>(records.size()));
     for (const auto& record : records) {
-        auto parsed = parseAircraft(record.toObject());
+        const auto object = record.toObject();
+        const bool hasWaypoints = version == 2 && object.contains("waypoints");
+        auto parsed = parseAircraft(object, hasWaypoints);
         if (!parsed)
             return fail("A scenario aircraft has invalid fields, type or units.");
+        if (hasWaypoints) {
+            auto route = parseRoute(object.value("waypoints"), *parsed);
+            if (!route)
+                return fail("A waypoint route has invalid fields, times or speed.");
+            routes.push_back(std::move(*route));
+        }
         aircraft.push_back(std::move(*parsed));
     }
 
     try {
-        LoadedScenario loaded{name, aeroradar::Simulator(std::move(aircraft))};
+        LoadedScenario loaded{name, aeroradar::Simulator(std::move(aircraft), std::move(routes))};
         error.clear();
         return loaded;
     } catch (const std::invalid_argument&) {
-        return fail("Scenario aircraft must have unique IDs and valid state.");
+        return fail("Scenario aircraft must have unique IDs and valid state and routes.");
     }
 }
