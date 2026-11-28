@@ -53,8 +53,12 @@ private slots:
         auto* pause = findItem(window->contentItem(), QStringLiteral("simulation-pause"));
         auto* play = findItem(window->contentItem(), QStringLiteral("simulation-play"));
         auto* reset = findItem(window->contentItem(), QStringLiteral("simulation-reset"));
+        auto* step = findItem(window->contentItem(), QStringLiteral("simulation-step"));
+        auto* rate = findItem(window->contentItem(), QStringLiteral("simulation-time-scale"));
         auto* track = findItem(window->contentItem(), QStringLiteral("track-2"));
-        QVERIFY(radar && traffic && pause && play && reset && track);
+        QVERIFY(radar && traffic && pause && play && reset && step && rate && track);
+        QVERIFY(!step->isEnabled());
+        QCOMPARE(rate->property("currentValue").toDouble(), 1.0);
 
         radar->forceActiveFocus();
         QTRY_VERIFY(radar->hasActiveFocus());
@@ -80,13 +84,20 @@ private slots:
             const QPointF center(item->width() / 2, item->height() / 2);
             QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, item->mapToScene(center).toPoint());
         };
-        click(pause);
+        pause->forceActiveFocus();
+        QTest::keyClick(window, Qt::Key_Space);
         QVERIFY(simulator.isPaused());
+        QVERIFY(step->isEnabled());
+        rate->forceActiveFocus();
+        QTest::keyClick(window, Qt::Key_Down);
+        QCOMPARE(simulator.timeScale(), 2.0);
         click(reset);
         QCOMPARE(simulator.simTimeSeconds(), 0.0);
+        click(step);
+        QCOMPARE(simulator.simTimeSeconds(), 0.1);
         QVERIFY(simulator.isPaused());
         click(play);
-        QTRY_VERIFY(simulator.simTimeSeconds() > 0.0);
+        QTRY_VERIFY(simulator.simTimeSeconds() > 0.1);
         QVERIFY(window->property("utcWallClock").toString().endsWith(QStringLiteral(" UTC")));
         QCOMPARE(warnings.size(), 0);
     }

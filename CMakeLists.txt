@@ -10,6 +10,7 @@ include(CTest)
 
 # --- Core simulation library (zero Qt dependency) ---
 add_library(aeroradar_core STATIC
+    core/simulation/src/BuiltinScenario.cpp
     core/simulation/src/Simulator.cpp
 )
 target_include_directories(aeroradar_core PUBLIC core/simulation/include)

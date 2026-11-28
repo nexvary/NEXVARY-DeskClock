@@ -6,6 +6,7 @@
 #include <QSignalSpy>
 #include <QString>
 #include <QtTest/QtTest>
+#include <limits>
 
 class SimulatorModelTests : public QObject {
     Q_OBJECT
@@ -150,6 +151,39 @@ private slots:
         QTRY_COMPARE(model_->simTimeDisplay(), QStringLiteral("00:00:01"));
         model_->reset();
         QCOMPARE(model_->simTimeDisplay(), QStringLiteral("00:00:00"));
+    }
+
+    void manualStepKeepsPauseAndFixedDelta() {
+        model_->stepOnce();
+        QCOMPARE(model_->simTimeSeconds(), 0.0);
+        model_->pause();
+        const double initialEast = model_->selected().value("x_km").toDouble();
+        model_->setTimeScale(4.0);
+        QSignalSpy changes(model_, &SimulatorModel::simStateChanged);
+        model_->stepOnce();
+        QCOMPARE(model_->simTimeSeconds(), 0.1);
+        QVERIFY(model_->selected().value("x_km").toDouble() > initialEast);
+        QCOMPARE(model_->selected().value("trail").toList().size(), 1);
+        QCOMPARE(changes.count(), 1);
+        QTest::qWait(120);
+        QCOMPARE(changes.count(), 1);
+        QVERIFY(model_->isPaused());
+    }
+
+    void timeScaleRejectsInvalidRatesAndPreservesState() {
+        model_->pause();
+        QSignalSpy changes(model_, &SimulatorModel::timeScaleChanged);
+        model_->setTimeScale(2.0);
+        model_->setTimeScale(2.0);
+        model_->setTimeScale(1.5);
+        model_->setTimeScale(0.0);
+        model_->setTimeScale(std::numeric_limits<double>::quiet_NaN());
+        QCOMPARE(model_->timeScale(), 2.0);
+        QCOMPARE(changes.count(), 1);
+        QCOMPARE(model_->simTimeSeconds(), 0.0);
+        model_->reset();
+        QCOMPARE(model_->timeScale(), 2.0);
+        QVERIFY(model_->isPaused());
     }
 
 private:

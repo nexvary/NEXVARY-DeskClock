@@ -101,6 +101,38 @@ Rectangle {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            Button {
+                objectName: "simulation-step"
+                text: qsTr("Step")
+                enabled: ctrlPanel.simulator !== null && ctrlPanel.simulator.paused
+                Accessible.description: qsTr("Advance the paused simulation by 0.1 seconds")
+                onClicked: ctrlPanel.simulator.stepOnce()
+            }
+
+            ComboBox {
+                objectName: "simulation-time-scale"
+                Layout.fillWidth: true
+                model: [
+                    { label: "¼×", rate: 0.25 },
+                    { label: "½×", rate: 0.5 },
+                    { label: "1×", rate: 1.0 },
+                    { label: "2×", rate: 2.0 },
+                    { label: "4×", rate: 4.0 }
+                ]
+                textRole: "label"
+                valueRole: "rate"
+                currentIndex: model.findIndex(option =>
+                    option.rate === (ctrlPanel.simulator ? ctrlPanel.simulator.timeScale : 1.0))
+                enabled: ctrlPanel.simulator !== null
+                Accessible.name: qsTr("Simulation playback speed")
+                onActivated: function(index) { ctrlPanel.simulator.setTimeScale(model[index].rate) }
+            }
+        }
+
         Rectangle { Layout.fillWidth: true; height: 1; color: AeroTheme.borderDim }
 
         Text {

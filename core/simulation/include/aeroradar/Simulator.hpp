@@ -26,6 +26,8 @@ public:
     // Does nothing when paused. Otherwise rejects invalid duration or overflow
     // without changing aircraft, elapsed time or step count.
     void step(double seconds);
+    // Advance one step while paused, preserving the pause state. No-op while running.
+    void step_once(double seconds);
 
     // Control — idempotent; never throw
     void pause()  noexcept;
@@ -39,6 +41,8 @@ public:
     [[nodiscard]] const std::vector<Aircraft>& aircraft() const noexcept;
 
 private:
+    void advance(double seconds);
+
     std::vector<Aircraft> initial_;
     std::vector<Aircraft> aircraft_;
     bool   paused_{ false };
