@@ -106,7 +106,10 @@ jobs:
           QT_QPA_PLATFORM=xcb timeout 30s xvfb-run -a -s '-screen 0 1600x1000x24' \
             ./build/aeroradar_desktop --screenshot-resized screenshot_linux_resized.png
           test -s screenshot_linux.png
+          QT_QPA_PLATFORM=xcb timeout 30s xvfb-run -a -s '-screen 0 1600x1000x24' \
+            ./build/aeroradar_desktop --screenshot-replay screenshot_replay.png
           test -s screenshot_linux_resized.png
+          test -s screenshot_replay.png
 
       - name: Deploy Qt and build Windows packages
         if: runner.os == 'Windows'
@@ -227,6 +230,7 @@ jobs:
           path: |
             screenshot_linux.png
             screenshot_linux_resized.png
+            screenshot_replay.png
           if-no-files-found: error
 
       - name: Upload Windows portable ZIP and checksum

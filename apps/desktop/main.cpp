@@ -14,18 +14,22 @@ int main(int argc, char* argv[]) {
     bool    smokeMode      = false;
     bool    screenshotMode = false;
     bool    resizeForScreenshot = false;
+    bool    replayScreenshot = false;
     QString screenshotPath;
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--smoke") == 0) {
             smokeMode = true;
         } else if (i + 1 < argc && (std::strcmp(argv[i], "--screenshot") == 0 ||
-                                    std::strcmp(argv[i], "--screenshot-resized") == 0)) {
+                                    std::strcmp(argv[i], "--screenshot-resized") == 0 ||
+                                    std::strcmp(argv[i], "--screenshot-replay") == 0)) {
             resizeForScreenshot = std::strcmp(argv[i], "--screenshot-resized") == 0;
+            replayScreenshot = std::strcmp(argv[i], "--screenshot-replay") == 0;
             screenshotMode = true;
             screenshotPath = argv[++i];
         } else if (std::strcmp(argv[i], "--screenshot") == 0 ||
-                   std::strcmp(argv[i], "--screenshot-resized") == 0) {
+                   std::strcmp(argv[i], "--screenshot-resized") == 0 ||
+                   std::strcmp(argv[i], "--screenshot-replay") == 0) {
             qCritical("A screenshot output path is required");
             return 2;
         }
@@ -73,6 +77,18 @@ int main(int argc, char* argv[]) {
     }
 
     if (screenshotMode) {
+        if (replayScreenshot) {
+            simulatorModel.pause();
+            simulatorModel.reset();
+            simulatorModel.startRecording();
+            for (int step = 0; step < 40; ++step)
+                simulatorModel.stepOnce();
+            auto* replay = simulatorModel.replayModel();
+            replay->stopCapture();
+            replay->seek(20);
+            replay->addBookmark(QStringLiteral("Example event"));
+            engine.rootObjects().first()->setProperty("workspace", QStringLiteral("replay"));
+        }
         if (resizeForScreenshot) {
             auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
             if (!window) return 1;
@@ -80,8 +96,8 @@ int main(int argc, char* argv[]) {
                 window->resize(window->minimumWidth(), window->minimumHeight());
             });
         }
-        QTimer::singleShot(2500, &app, [&app, &engine, &qmlObjectFailed, screenshotPath]() {
-            if (qmlObjectFailed || engine.rootObjects().isEmpty()) {
+        QTimer::singleShot(2500, &app, [&app, &engine, &qmlObjectFailed, &qmlWarning, screenshotPath]() {
+            if (qmlObjectFailed || qmlWarning || engine.rootObjects().isEmpty()) {
                 qCritical("SCREENSHOT FAIL: QML not loaded");
                 app.exit(1);
                 return;

@@ -27,6 +27,102 @@ class SimulatorModelTests : public QObject {
     Q_OBJECT
 
 private slots:
+    void deterministicRecordingRoundTrip() {
+        SimulatorModel model;
+        model.pause();
+        QVERIFY(model.applyScenarioText(QString::fromUtf8(scenarioFixture("civil-waypoints.json"))));
+        auto* replay = model.replayModel();
+        model.stepOnce();
+        model.startRecording();
+        QVERIFY(replay->recording());
+
+        QVariantList snapshots;
+        for (int frame = 0; frame < 50; ++frame) {
+            snapshots.append(QVariant::fromValue(model.tracks()));
+            if (frame + 1 < 50)
+                model.stepOnce();
+        }
+        replay->stopCapture();
+        QVERIFY(replay->available());
+        QCOMPARE(replay->lastFrame(), 49);
+        QCOMPARE(replay->elapsedSeconds(), 0.1);
+        replay->seek(18);
+        QVERIFY(replay->addBookmark("Climb"));
+        replay->setNotes("Civil training notes");
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto path = QUrl::fromLocalFile(directory.filePath("flight.aerorec"));
+        QVERIFY(replay->saveRecording(path));
+        ReplayModel loaded;
+        QVERIFY(loaded.openRecording(path));
+        QCOMPARE(loaded.bookmarks(), replay->bookmarks());
+        QCOMPARE(loaded.notes(), replay->notes());
+        QVERIFY(!loaded.captureUtc().isEmpty());
+        for (int frame = 49; frame >= 0; --frame) {
+            loaded.seek(frame);
+            const auto originals = snapshots.at(frame).toList();
+            const auto currentTracks = loaded.tracks();
+            QCOMPARE(currentTracks.size(), originals.size());
+            QVERIFY(!originals.isEmpty());
+            const auto original = originals.first().toMap();
+            const auto current = currentTracks.first().toMap();
+            for (const auto* key : {"id", "x_km", "y_km", "altitude_m", "heading_deg", "speed_kt"})
+                QCOMPARE(current.value(key), original.value(key));
+        }
+        QCOMPARE(model.simTimeSeconds(), 5.0);
+        loaded.seek(48);
+        loaded.setRate(4.0);
+        loaded.play();
+        QTRY_VERIFY(loaded.ended());
+        QVERIFY(loaded.paused());
+        loaded.step();
+        QCOMPARE(loaded.frame(), 49);
+        loaded.reset();
+        QCOMPARE(loaded.frame(), 0);
+        loaded.seek(-1);
+        QCOMPARE(loaded.frame(), 0);
+    }
+
+    void recordingRejectsCorruptionAndPreservesCapture() {
+        SimulatorModel model;
+        model.pause();
+        auto* replay = model.replayModel();
+        model.startRecording();
+        model.stepOnce();
+        model.reset();
+        QVERIFY(replay->available());
+        QCOMPARE(replay->lastFrame(), 1);
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto good = QUrl::fromLocalFile(directory.filePath("flight.aerorec"));
+        QVERIFY(replay->saveRecording(good));
+        QFile input(good.toLocalFile());
+        QVERIFY(input.open(QIODevice::ReadOnly));
+        const auto bytes = input.readAll();
+        input.close();
+        auto tampered = bytes;
+        tampered[static_cast<qsizetype>(tampered.size() / 2)] = 'X';
+        auto future = bytes;
+        future[7] = '2';
+        const QList<QByteArray> invalid{tampered, future, bytes.first(7), QByteArray(12 * 1024 * 1024, 'X')};
+        for (const auto& payload : invalid) {
+            const auto corrupt = QUrl::fromLocalFile(directory.filePath("corrupt.aerorec"));
+            QFile output(corrupt.toLocalFile());
+            QVERIFY(output.open(QIODevice::WriteOnly));
+            QCOMPARE(output.write(payload), payload.size());
+            output.close();
+            QVERIFY(!replay->openRecording(corrupt));
+            QVERIFY(!replay->error().isEmpty());
+            QCOMPARE(replay->lastFrame(), 1);
+        }
+        QVERIFY(!replay->openRecording(QUrl("https://example.com/flight.aerorec")));
+        QVERIFY(!replay->saveRecording(QUrl::fromLocalFile(directory.path())));
+        QVERIFY(replay->openRecording(good));
+        QVERIFY(replay->error().isEmpty());
+    }
+
     void init()    { model_ = new SimulatorModel; }
     void cleanup() { delete model_; model_ = nullptr; }
 

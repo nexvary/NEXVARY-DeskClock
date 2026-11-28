@@ -36,6 +36,41 @@ private slots:
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory_.path());
     }
 
+    void replayWorkspaceCapturesAndStepsIndependently() {
+        SimulatorModel simulator;
+        simulator.pause();
+        QQmlApplicationEngine engine;
+        engine.rootContext()->setContextProperty("aeroSimulatorModel", &simulator);
+        QSignalSpy warnings(&engine, &QQmlApplicationEngine::warnings);
+        engine.loadFromModule("AeroRadar", "Main");
+        QCOMPARE(engine.rootObjects().size(), 1);
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().front());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+
+        const auto click = [window](QQuickItem* item) {
+            const QPointF center(item->width() / 2, item->height() / 2);
+            QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, item->mapToScene(center).toPoint());
+        };
+        auto* navigation = findItem(window->contentItem(), QStringLiteral("workspace-replay"));
+        auto* capture = findItem(window->contentItem(), QStringLiteral("replay-capture"));
+        auto* step = findItem(window->contentItem(), QStringLiteral("replay-step"));
+        QVERIFY(navigation && capture && step);
+        click(navigation);
+        QTRY_COMPARE(window->property("workspace").toString(), QStringLiteral("replay"));
+        click(capture);
+        QVERIFY(simulator.replayModel()->recording());
+        simulator.stepOnce();
+        simulator.stepOnce();
+        click(capture);
+        QVERIFY(simulator.replayModel()->available());
+        QVERIFY(step->isEnabled());
+        click(step);
+        QCOMPARE(simulator.replayModel()->frame(), 1);
+        QCOMPARE(simulator.simTimeSeconds(), 0.2);
+        QVERIFY(warnings.isEmpty());
+    }
+
     void controlsAndWorkspaces() {
         SimulatorModel simulator;
         QQmlApplicationEngine engine;

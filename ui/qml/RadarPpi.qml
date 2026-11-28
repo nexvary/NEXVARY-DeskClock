@@ -16,6 +16,7 @@ Rectangle {
     // ── Public interface ─────────────────────────────────────────────────
     objectName: "radar-ppi"
     property var simulator: null
+    property string sourceLabel: qsTr("DATA: SYNTHETIC")
     readonly property var tracks: simulator ? simulator.tracks : []
     readonly property var rangesKm: [10, 20, 40, 80, 160, 320, 640, 1280]
     property int rangeIndex: 2
@@ -376,6 +377,6 @@ Rectangle {
         Text { text: "UAS (Multirotor)";      color: AeroTheme.accentGreen; font.pixelSize: 9 }
         Text { text: "Aircraft (Fixed-Wing)"; color: AeroTheme.accentBlue; font.pixelSize: 9 }
         Item { Layout.fillWidth: true }
-        Text { text: "DATA: SYNTHETIC"; color: AeroTheme.accentAmber; font.pixelSize: 9 }
+        Text { text: ppi.sourceLabel; color: AeroTheme.accentAmber; font.pixelSize: 9 }
     }
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "ReplayModel.hpp"
 #include "aeroradar/Simulator.hpp"
 #include <QObject>
 #include <QTimer>
@@ -14,6 +15,7 @@
 class SimulatorModel : public QObject {
     Q_OBJECT
 
+    Q_PROPERTY(QObject* replay READ replayModel CONSTANT)
     Q_PROPERTY(bool    paused          READ isPaused       NOTIFY simStateChanged)
     Q_PROPERTY(double  simTimeSeconds  READ simTimeSeconds NOTIFY simStateChanged)
     Q_PROPERTY(QString simTimeDisplay  READ simTimeDisplay NOTIFY simStateChanged)
@@ -35,6 +37,7 @@ public:
 
     explicit SimulatorModel(QObject* parent = nullptr);
 
+    [[nodiscard]] ReplayModel* replayModel() { return &replay_; }
     [[nodiscard]] bool         isPaused()        const;
     [[nodiscard]] double       simTimeSeconds()  const;
     [[nodiscard]] QString      simTimeDisplay()  const; // "HH:MM:SS"
@@ -52,6 +55,7 @@ public slots:
     Q_INVOKABLE void pause();
     Q_INVOKABLE void reset();
     Q_INVOKABLE void stepOnce();
+    Q_INVOKABLE void startRecording();
     Q_INVOKABLE bool loadScenario(const QUrl& fileUrl);
     Q_INVOKABLE bool applyScenarioText(const QString& text);
     Q_INVOKABLE bool saveScenarioText(const QUrl& fileUrl, const QString& text);
@@ -74,6 +78,7 @@ private:
     [[nodiscard]] QVariantMap trackToVariant(std::size_t index) const;
 
     aeroradar::Simulator sim_;
+    ReplayModel replay_;
     QTimer*              timer_;
     double timeScale_{1.0};
     QString scenarioName_;
